@@ -1,0 +1,30 @@
+tiers:
+  bronze:
+    items:
+      notebook:
+        - notebook-001
+      datapipeline:
+        - datapipeline-001
+
+  silver:
+    items:
+      notebook:
+        - notebook-001
+        - notebook-002
+      datapipeline:
+        - datapipeline-001
+        - datapipeline-002
+
+  gold:
+    items:
+      notebook:
+        - notebook-001
+        - notebook-002
+        - notebook-003
+        - notebook-004
+      datapipeline:
+        - datapipeline-001
+        - datapipeline-002
+        - datapipeline-003
+      dataset:
+        - dataset-001

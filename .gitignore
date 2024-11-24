@@ -1,0 +1,6 @@
+obj/*
+bin/*
+**/.DS_Store
+*/.env
+notebooks/items/*
+appsettings.json
