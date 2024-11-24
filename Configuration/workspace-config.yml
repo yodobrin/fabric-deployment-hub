@@ -1,0 +1,26 @@
+workspaces:
+  - name: Workspace1
+    id: workspace-001
+    type: dev
+    tier: bronze
+    parameters:
+      parameter1: value1
+      parameter2: value2
+    secrets:
+      apiKey: API_KEY_SECRET_NAME
+      dbConnectionString: DB_CONN_STRING_SECRET_NAME
+    settings:
+      itemSpecificSetting: ITEM_SPECIFIC_SETTING_NAME
+
+  - name: Workspace2
+    id: workspace-002
+    type: prod
+    tier: gold
+    parameters:
+      parameter1: prod_value1
+      parameter2: prod_value2
+    secrets:
+      apiKey: API_KEY_SECRET_NAME
+      dbConnectionString: DB_CONN_STRING_SECRET_NAME
+    settings:
+      itemSpecificSetting: PROD_ITEM_SPECIFIC_SETTING_NAME
