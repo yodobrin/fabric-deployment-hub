@@ -12,10 +12,12 @@ var configurationDirectory = builder.Configuration["ConfigurationDirectory"];
 var azureTenant = builder.Configuration["AZURE_TENANT_ID"];
 var fabricClientId = builder.Configuration["FABRIC_API_CLIENT_ID"];
 var fabricClientSecret = builder.Configuration["FABRIC_API_CLIENT_SECRET"];
+// temp containers would hold the entire code base from github
+var fabricCodeStoreUri = builder.Configuration["FABRIC_CODE_STORE_URI"];
 
-Console.WriteLine($"Configuration Loaded: \n Directory: {configurationDirectory}\n Tenant: {azureTenant}\n ClientId: {fabricClientId} ");
+Console.WriteLine($"Configuration Loaded: \n Directory: {configurationDirectory}\n Tenant: {azureTenant}\n ClientId: {fabricClientId} \n CodeStoreUri: {fabricCodeStoreUri}");
 
-if (string.IsNullOrEmpty(configurationDirectory) || string.IsNullOrEmpty(azureTenant) || string.IsNullOrEmpty(fabricClientId) || string.IsNullOrEmpty(fabricClientSecret))
+if (string.IsNullOrEmpty(configurationDirectory) || string.IsNullOrEmpty(azureTenant) || string.IsNullOrEmpty(fabricClientId) || string.IsNullOrEmpty(fabricClientSecret)|| string.IsNullOrEmpty(fabricCodeStoreUri))
 {
     throw new Exception("Incomplete Configuration!! Deployment-Hub could not start.");
 }
@@ -25,7 +27,8 @@ string[] scopes = new[] { "https://fabric.microsoft.com/.default" };
 
 // Register TokenService
 builder.Services.AddSingleton<ITokenService>(new TokenService(fabricClientId, fabricClientSecret, authority, scopes));
-
+// Register the fabricCodeStoreUri as a singleton
+builder.Services.AddSingleton(fabricCodeStoreUri);
 
 // Register PlannerService and pass the configuration directory as a parameter
 builder.Services.AddSingleton<IPlannerService>(provider =>

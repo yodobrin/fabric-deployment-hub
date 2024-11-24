@@ -6,6 +6,20 @@
 GET {{fabric_deployment_hub_HostAddress}}/api/Planner/workspace-configs
 Accept: application/json
 
+### Test local Deployment API
+POST {{fabric_deployment_hub_HostAddress}}/api/Deployments
+Content-Type: application/json
+
+{
+  "workspaceIds": [
+    "4aca0508-e966-40a7-a2a2-84861b281c83"
+  ],
+  "repoContainer": "8aff1b19-4d31-4586-8ff7-6b9aee2f5c9f",
+  "modifiedFolders": [
+    "items/notebooks/Notebook 2.Notebook"
+  ]
+}
+
 ###
 
 GET {{fabric_deployment_hub_HostAddress}}/api/workspace/{{workspaceId}}
