@@ -1,0 +1,213 @@
+
+### client id of the fabric api access f052e5d7-abea-41ed-b29d-5f50cd49b726
+@fabric_deployment_hub_HostAddress = {{$dotenv FABRIC_DEPLOYMENT_HUB_HOST_ADDRESS}}
+@workspaceId = {{$dotenv WORKSPACE_ID}}
+@targetWorkspaceId = {{$dotenv TARGET_WORKSPACE_ID}}
+GET {{fabric_deployment_hub_HostAddress}}/api/Planner/workspace-configs
+Accept: application/json
+
+### Test local Deployment API
+POST {{fabric_deployment_hub_HostAddress}}/api/Deployments
+Content-Type: application/json
+
+{
+  "workspaceIds": [
+    "4aca0508-e966-40a7-a2a2-84861b281c83"
+  ],
+  "repoContainer": "8aff1b19-4d31-4586-8ff7-6b9aee2f5c9f",
+  "modifiedFolders": [
+    "items/notebooks/Notebook 2.Notebook"
+  ]
+}
+
+###
+# env-fabric-sample--0ygbtqy.wittyisland-a9743d25.northeurope.azurecontainerapps.io
+@deployment_hub = env-fabric-sample--5olbzav.wittyisland-a9743d25.northeurope.azurecontainerapps.io
+POST https://{{deployment_hub}}/api/Deployments
+Content-Type: application/json
+
+{
+  "workspaceIds": [
+    "3dc6d3ea-f6c5-41c6-b9f7-dbdadccfd76e" 
+  ],
+  "repoContainer": "8aff1b19-4d31-4586-8ff7-6b9aee2f5c9f",
+  "modifiedFolders": [
+    "items/notebooks/Notebook 3.Notebook"
+  ]
+}
+###
+
+GET https://{{deployment_hub}}/api/Planner/workspace-configs
+
+###
+GET {{fabric_deployment_hub_HostAddress}}/api/workspace/{{workspaceId}}
+
+### Getting item (notebook in this case) definition. The process is 2 or 3 stages. 
+# The first call is a 202, providing a location with the status of the request, then another call to get the location of the base64 content
+# all calls needs to have an authorization header with the access token
+@notebookId = 82098dd0-0b5c-42c0-9060-97600acd3063
+
+POST https://api.fabric.microsoft.com/v1/workspaces/{{workspaceId}}/items/{{notebookId}}/getDefinition
+Content-Type: application/json
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### Get all notebooks in specific workspace
+
+GET https://api.fabric.microsoft.com/v1/workspaces/{{workspaceId}}/notebooks
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+### Delete a notebook
+@notebook_ = 82098dd0-0b5c-42c0-9060-97600acd3063
+
+POST https://api.fabric.microsoft.com/v1/workspaces/{{workspaceId}}/notebooks/{{notebook_}}/getDefinition
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### sample of calling the first location
+GET https://wabi-us-east2-d-primary-redirect.analysis.windows.net/v1/operations/45955fc0-3b53-449c-a2a7-d39d240ac157
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### secondary location with the base64 content
+GET https://wabi-us-east2-d-primary-redirect.analysis.windows.net/v1/operations/45955fc0-3b53-449c-a2a7-d39d240ac157/result
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### Creating a new notebook with and without adefinition.
+# calling the creation of a notebook w/o definition is only the logical name and the description of the notebook. 
+# The call with definition is the second one here with a json object with two parts, the content of the notebook and a meta data file.
+@content_b64 = <replace with your converted content to base64>
+@platform_b64 = <replace with your converted content to base64>
+
+POST https://api.fabric.microsoft.com/v1/workspaces/{{workspaceId}}/notebooks
+Content-Type: application/json
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+{
+    "displayName": "Notebook XX",
+    "description": "A notebook which was created via REST together with O"
+}
+### with definition
+POST https://api.fabric.microsoft.com/v1/workspaces/{{workspaceId}}/notebooks
+Content-Type: application/json
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+{
+    "displayName": "Notebook XXX",
+    "description": "A notebook which was created via REST description",
+    "definition": {
+        "parts": [
+            {
+                "path": "notebook-content.py",
+                "payload": "{{content_b64}}",
+                "payloadType": "InlineBase64"
+            },
+            {
+                "path": ".platform",
+                "payload": "{{platform_b64}}",
+                "payloadType": "InlineBase64"
+            }
+        ]
+    }
+}
+
+### this is not working (not implemented)
+@x_notebook_id = 31e8534b-d7a7-4213-a0d5-7a2630e11473
+POST https://api.fabric.microsoft.com/v1/workspaces/{workspaceId}/notebooks/{{x_notebook_id}}/updateDefinition
+{
+  "displayName": "Notebook 15",
+  "description": "A notebook description",
+  "definition": {
+    "format": "ipynb",
+    "parts": [
+      {
+        "path": "notebook-content15.py",
+        "payload": "{{content_b64}}",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": ".platform",
+        "payload": "{{platform_b64}}",
+        "payloadType": "InlineBase64"
+      }
+    ]
+  }
+}
+
+
+
+###
+@x_notebook_id = 31e8534b-d7a7-4213-a0d5-7a2630e11473
+
+POST https://api.fabric.microsoft.com/v1/workspaces/{{workspaceId}}/notebooks
+Content-Type: application/json
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+{
+    "displayName": "Notebook 4X4",
+    "description": "A notebook which was created via REST description",
+    "definition": 
+   {    
+    "parts": [
+        {
+            "path": "artifact.content.py",
+            "payload": "{{content_b64}}",
+            "payloadType": "InlineBase64"
+        },
+        {
+            "path": ".platform",
+            "payload": "{{platform_b64}}",
+            "payloadType": "InlineBase64"
+        }
+    ]
+}
+}
+###
+
+GET https://wabi-us-east2-d-primary-redirect.analysis.windows.net/v1/operations/94317503-3572-438b-93f0-0122028560c8
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### another workspace
+@target_ws = 3dc6d3ea-f6c5-41c6-b9f7-dbdadccfd76e
+GET https://api.fabric.microsoft.com/v1/workspaces/{{target_ws}}/notebooks
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+### create a notebook on a different workspace
+
+POST https://api.fabric.microsoft.com/v1/workspaces/{{target_ws}}/notebooks
+Content-Type: application/json
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+{
+    "displayName": "Notebook 3XX",
+    "description": "A notebook which was created via REST together with Ori",
+    "definition": {
+    "parts": [
+      {
+        "path": "notebook-content.py",
+        "payload": "{{content_b64}}",
+        "payloadType": "InlineBase64"
+      },
+      {
+        "path": ".platform",
+        "payload": "{{platform_b64}}",
+        "payloadType": "InlineBase64"
+      }
+    ]
+  }
+}
+
+### status
+
+GET https://wabi-us-east2-d-primary-redirect.analysis.windows.net/v1/operations/f610192d-6ee5-4a96-910a-240b25ab8506
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+### get notebook definition
+@notbook_id = 303a0f2b-a197-418e-b659-40296f256a12
+POST https://api.fabric.microsoft.com/v1/workspaces/{{target_ws}}/notebooks/{{notbook_id}}/getDefinition
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+###
+GET https://wabi-us-east2-d-primary-redirect.analysis.windows.net/v1/operations/537a592a-1087-474c-9591-0589239592cf
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+###
+GET https://wabi-us-east2-d-primary-redirect.analysis.windows.net/v1/operations/f9b14fef-ac9b-4d4a-bf0d-911bff423e50/result
+Authorization: Bearer {{$dotenv ACCESS_TOKEN}}
+
+###
