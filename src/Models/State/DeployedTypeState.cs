@@ -1,4 +1,4 @@
-namespace FabricDeploymentHub.Models;
+namespace FabricDeploymentHub.Models.State;
 
 public class DeployedTypeState
 {

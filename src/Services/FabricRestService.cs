@@ -9,6 +9,7 @@ public class FabricRestService : IFabricRestService
 {
     private readonly HttpClient _httpClient;
     private readonly ITokenService _tokenService;
+    private const string _fabricApiBaseUri = "https://api.fabric.microsoft.com/v1/";
 
     public FabricRestService(HttpClient httpClient, ITokenService tokenService)
     {
@@ -20,8 +21,8 @@ public class FabricRestService : IFabricRestService
     {
         string accessToken = await _tokenService.GetAccessTokenAsync();
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var response = await _httpClient.GetAsync(uri);
+        var compoundUri = new Uri(new Uri(_fabricApiBaseUri), uri);
+        var response = await _httpClient.GetAsync(compoundUri);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsStringAsync();
@@ -46,8 +47,8 @@ public class FabricRestService : IFabricRestService
     {
         string accessToken = await _tokenService.GetAccessTokenAsync();
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        HttpRequestMessage request = new(method, uri)
+        var compoundUri = new Uri(new Uri(_fabricApiBaseUri), uri);
+        HttpRequestMessage request = new(method, compoundUri)
         {
             Content = payload != null
                 ? new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace FabricDeploymentHub.Models;
 
-public class DeploymentRequest
+public class TenantDeploymentRequest
 {
     /// <summary>
     /// List of Workspace IDs where deployment is required.

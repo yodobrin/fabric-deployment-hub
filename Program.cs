@@ -1,52 +1,93 @@
-using FabricDeploymentHub;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Log the current environment
 var environment = builder.Environment.EnvironmentName;
 Console.WriteLine($"Current Environment: {environment}");
 
-// Log the ConfigurationDirectory path
-var configurationDirectory = builder.Configuration["ConfigurationDirectory"];
-
+// Retrieve configuration values
+var configurationContainer = builder.Configuration["FABRIC_TENANT_CONFIG"];
 var azureTenant = builder.Configuration["AZURE_TENANT_ID"];
 var fabricClientId = builder.Configuration["FABRIC_API_CLIENT_ID"];
 var fabricClientSecret = builder.Configuration["FABRIC_API_CLIENT_SECRET"];
-// temp containers would hold the entire code base from github
 var fabricCodeStoreUri = builder.Configuration["FABRIC_CODE_STORE_URI"];
+var hubManagedIdentity = builder.Configuration["HUB_MANAGED_IDENTITY"];
 
-Console.WriteLine($"Configuration Loaded: \n Directory: {configurationDirectory}\n Tenant: {azureTenant}\n ClientId: {fabricClientId} \n CodeStoreUri: {fabricCodeStoreUri}");
-
-if (string.IsNullOrEmpty(configurationDirectory) || string.IsNullOrEmpty(azureTenant) || string.IsNullOrEmpty(fabricClientId) || string.IsNullOrEmpty(fabricClientSecret)|| string.IsNullOrEmpty(fabricCodeStoreUri))
+if (string.IsNullOrEmpty(configurationContainer) || 
+    string.IsNullOrEmpty(azureTenant) || 
+    string.IsNullOrEmpty(fabricClientId) || 
+    string.IsNullOrEmpty(fabricClientSecret) || 
+    string.IsNullOrEmpty(fabricCodeStoreUri) ||
+    string.IsNullOrEmpty(hubManagedIdentity))
 {
     throw new Exception("Incomplete Configuration!! Deployment-Hub could not start.");
 }
 
+Console.WriteLine($"Configuration Loaded: \n Config Container: {configurationContainer}\n Tenant: {azureTenant}\n ClientId: {fabricClientId} \n CodeStoreUri: {fabricCodeStoreUri}");
+
+
+
+// Define authority and scopes
 string authority = $"https://login.microsoftonline.com/{azureTenant}";
-string[] scopes = new[] { "https://fabric.microsoft.com/.default" };
+// string[] scopes = new[] { "https://fabric.microsoft.com/.default" };
+string[] scopes = new string[] { "https://api.fabric.microsoft.com/.default" };
 
 // Register TokenService
 builder.Services.AddSingleton<ITokenService>(new TokenService(fabricClientId, fabricClientSecret, authority, scopes));
-// Register the fabricCodeStoreUri as a singleton
-builder.Services.AddSingleton(fabricCodeStoreUri);
-
-// Register PlannerService and pass the configuration directory as a parameter
-builder.Services.AddSingleton<IPlannerService>(provider =>
+builder.Services.AddScoped<DeploymentProcessor>();
+// Register BlobServiceClient as a singleton
+builder.Services.AddSingleton(_ =>
 {
-    var logger = provider.GetRequiredService<ILogger<PlannerService>>();    
-    return new PlannerService(logger, configurationDirectory);
+    try
+    {
+        var credentialOptions = new DefaultAzureCredentialOptions
+        {
+            ManagedIdentityClientId = hubManagedIdentity
+        };
+
+        var blobServiceClient = new BlobServiceClient(
+            new Uri(fabricCodeStoreUri),
+            new DefaultAzureCredential(credentialOptions)
+        );
+
+        // Log successful creation
+        Console.WriteLine($"Successfully created BlobServiceClient using Managed Identity: {hubManagedIdentity}");
+        
+        return blobServiceClient;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Failed to create BlobServiceClient: {ex.Message}");
+        throw;
+    }
 });
 
-// Register WorkspaceStateService with DI container
+// Register PlannerService with the BlobServiceClient and configuration container name
+builder.Services.AddSingleton<IPlannerService>(provider =>
+{
+    var logger = provider.GetRequiredService<ILogger<PlannerService>>();
+    var blobServiceClient = provider.GetRequiredService<BlobServiceClient>();
+    return new PlannerService(logger, blobServiceClient, configurationContainer);
+});
+
+// Register WorkspaceStateService
 builder.Services.AddSingleton<IWorkspaceStateService, WorkspaceStateService>();
+
+// Register FabricRestService
 builder.Services.AddHttpClient<IFabricRestService, FabricRestService>();
+
 // Add other services and middleware as needed
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(8080); 
+});
+
 var app = builder.Build();
 
+// Configure middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

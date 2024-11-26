@@ -5,11 +5,11 @@ namespace FabricDeploymentHub.Controllers;
 [Route("api/[controller]")]
 public class PlannerController : ControllerBase
 {
-    private readonly PlannerService _plannerService;
+    private readonly IPlannerService _plannerService;
 
     private readonly ITokenService _tokenService;
 
-    public PlannerController(PlannerService plannerService, ITokenService tokenService)
+    public PlannerController(IPlannerService plannerService, ITokenService tokenService)
     {
         _plannerService = plannerService;
         _tokenService = tokenService;
