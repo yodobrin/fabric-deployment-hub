@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace FabricDeploymentHub.Models.Items;
 
 public class DeployNotebookRequest : BaseDeployRequest
@@ -7,17 +9,18 @@ public class DeployNotebookRequest : BaseDeployRequest
 
     public override object GeneratePayload()
     {
+        // Generate the payload matching the expected structure
         return new
         {
-            displayName = DisplayName,
-            description = Description,
+            displayName = DisplayName, // Correct JSON property name
+            description = Description, // Correct JSON property name
             definition = new
             {
                 parts = Definition.Parts.Select(part => new
                 {
-                    path = part.Path,
-                    payload = part.Payload,
-                    payloadType = part.PayloadType
+                    path = part.Path, // Matches the expected property name
+                    payload = part.Payload, // Matches the expected property name
+                    payloadType = part.PayloadType // Matches the expected property name
                 })
             }
         };

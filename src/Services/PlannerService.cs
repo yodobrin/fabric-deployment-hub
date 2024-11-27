@@ -1,11 +1,11 @@
+
 namespace FabricDeploymentHub.Services;
+
 public class PlannerService : IPlannerService
 {
     private readonly ILogger<PlannerService> _logger;
     private readonly BlobServiceClient _blobServiceClient;
     private readonly string _configurationContainerName;
-    private readonly IDeserializer _deserializer;
-    private readonly ISerializer _serializer;
 
     public WorkspaceConfigList WorkspaceConfigs { get; private set; } = new WorkspaceConfigList();
     public ItemTierConfig ItemTierConfigs { get; private set; } = new ItemTierConfig();
@@ -19,18 +19,85 @@ public class PlannerService : IPlannerService
         _blobServiceClient = blobServiceClient;
         _configurationContainerName = configurationContainerName;
 
-        _deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .Build();
-
-        _serializer = new SerializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .Build();
-
-        LoadConfigurations();
+        // Load configurations asynchronously
+        LoadConfigurationsAsync().GetAwaiter().GetResult();
     }
 
-    public void UpdateWorkspaceConfig(WorkspaceConfigList updatedConfig, bool saveToFile = false)
+
+    public async Task<TenantDeploymentResponse> PlanTenantDeploymentAsync(TenantDeploymentRequest tenantRequest)
+    {
+        var response = new TenantDeploymentResponse();
+
+        // Validate the tenant request
+        var validationErrors = ValidationUtils.ValidateTenantDeploymentRequest(tenantRequest);
+        if (validationErrors.Any())
+        {
+            response.Issues.AddRange(validationErrors);
+            _logger.LogError("Validation failed for TenantDeploymentRequest: {ValidationErrors}", validationErrors);
+            return response;
+        }
+
+        // Process each workspace in the request
+        foreach (var workspaceId in tenantRequest.WorkspaceIds)
+        {
+            var workspaceResponse = new WorkspaceDeploymentResponse { WorkspaceId = workspaceId };
+
+            // Retrieve workspace configuration
+            var workspaceConfig = WorkspaceUtils.GetWorkspaceConfig(WorkspaceConfigs, workspaceId, _logger);
+            if (workspaceConfig == null)
+            {
+                workspaceResponse.Issues.Add($"Workspace ID {workspaceId} not found in configurations.");
+                response.Workspaces.Add(workspaceResponse);
+                continue;
+            }
+
+            // Process each modified folder
+            foreach (var folder in tenantRequest.ModifiedFolders)
+            {
+                var platformMetadata = await BlobUtils.ParsePlatformMetadataAsync(
+                    BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer),
+                    folder,
+                    _logger);
+
+                if (platformMetadata == null)
+                {
+                    workspaceResponse.Issues.Add($"Invalid or missing metadata in folder: {folder}.");
+                    continue;
+                }
+
+                // Check eligibility for deployment
+                if (!WorkspaceUtils.IsEligibleForDeployment(platformMetadata, workspaceId, WorkspaceConfigs, ItemTierConfigs, _logger))
+                {
+                    workspaceResponse.Issues.Add($"Item {platformMetadata.Metadata.DisplayName} is not eligible for deployment to workspace {workspaceId}.");
+                    continue;
+                }
+
+                // Create deployment request for eligible items
+                var deploymentRequest = await DeploymentRequestFactory.CreateDeploymentRequestAsync(
+                    platformMetadata,
+                    folder,
+                    workspaceId,
+                    BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer), _logger);
+
+                if (deploymentRequest != null)
+                {
+                    _logger.LogInformation($"Deployment request created for item {platformMetadata.Metadata.DisplayName} of type {platformMetadata.Metadata.Type} for workspace {workspaceId}. ");
+                    workspaceResponse.DeploymentRequests.Add(deploymentRequest);   
+                    workspaceResponse.Messages.Add($"Deployment planned for item {platformMetadata.Metadata.DisplayName} of type {platformMetadata.Metadata.Type} in workspace {workspaceId}.");                 
+                }
+            }
+
+            response.Workspaces.Add(workspaceResponse);
+        }
+                // Save to blob storage if required
+        if (tenantRequest.SavePlan)
+        {
+            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(_blobServiceClient, response, tenantRequest.RepoContainer, _logger);
+        }
+        return response;
+    }
+
+    public async void UpdateWorkspaceConfig(WorkspaceConfigList updatedConfig, bool saveToFile = false)
     {
         WorkspaceConfigs = updatedConfig;
 
@@ -38,12 +105,9 @@ public class PlannerService : IPlannerService
         {
             try
             {
-                var containerClient = GetContainerClient();
-                var workspaceConfigBlob = containerClient.GetBlobClient("workspace-config.yml");
-                var yaml = _serializer.Serialize(updatedConfig);
-                using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(yaml));
-                workspaceConfigBlob.Upload(stream, overwrite: true);
-
+                var containerClient = BlobUtils.GetContainerClient(_blobServiceClient, _configurationContainerName);
+                var yamlContent = YamlUtils.SerializeToYaml(updatedConfig);
+                await BlobUtils.UploadBlobContentAsync(containerClient, "workspace-config.yml", yamlContent);
                 _logger.LogInformation("Workspace configuration updated successfully in Blob Storage.");
             }
             catch (Exception ex)
@@ -54,7 +118,7 @@ public class PlannerService : IPlannerService
         }
     }
 
-    public void UpdateItemTierConfig(ItemTierConfig updatedConfig, bool saveToFile = false)
+    public async void UpdateItemTierConfig(ItemTierConfig updatedConfig, bool saveToFile = false)
     {
         ItemTierConfigs = updatedConfig;
 
@@ -62,12 +126,9 @@ public class PlannerService : IPlannerService
         {
             try
             {
-                var containerClient = GetContainerClient();
-                var itemTierConfigBlob = containerClient.GetBlobClient("item-tier-config.yml");
-                var yaml = _serializer.Serialize(updatedConfig);
-                using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(yaml));
-                itemTierConfigBlob.Upload(stream, overwrite: true);
-
+                var containerClient = BlobUtils.GetContainerClient(_blobServiceClient, _configurationContainerName);
+                var yamlContent = YamlUtils.SerializeToYaml(updatedConfig);
+                await BlobUtils.UploadBlobContentAsync(containerClient, "item-tier-config.yml", yamlContent);
                 _logger.LogInformation("Item tier configuration updated successfully in Blob Storage.");
             }
             catch (Exception ex)
@@ -78,26 +139,19 @@ public class PlannerService : IPlannerService
         }
     }
 
-    private BlobContainerClient GetContainerClient()
-    {
-        return _blobServiceClient.GetBlobContainerClient(_configurationContainerName);
-    }
-
-    private void LoadConfigurations()
+    private async Task LoadConfigurationsAsync()
     {
         try
         {
-            var containerClient = GetContainerClient();
+            var containerClient = BlobUtils.GetContainerClient(_blobServiceClient, _configurationContainerName);
 
             // Load Workspace Configurations
-            var workspaceConfigBlob = containerClient.GetBlobClient("workspace-config.yml");
-            var workspaceConfigYaml = workspaceConfigBlob.DownloadContent().Value.Content.ToString();
-            WorkspaceConfigs = _deserializer.Deserialize<WorkspaceConfigList>(workspaceConfigYaml);
+            var workspaceConfigYaml = await BlobUtils.DownloadBlobContentAsync(containerClient, "workspace-config.yml");
+            WorkspaceConfigs = YamlUtils.DeserializeYaml<WorkspaceConfigList>(workspaceConfigYaml);
 
             // Load Item Tier Configurations
-            var itemTierConfigBlob = containerClient.GetBlobClient("item-tier-config.yml");
-            var itemTierConfigYaml = itemTierConfigBlob.DownloadContent().Value.Content.ToString();
-            ItemTierConfigs = _deserializer.Deserialize<ItemTierConfig>(itemTierConfigYaml);
+            var itemTierConfigYaml = await BlobUtils.DownloadBlobContentAsync(containerClient, "item-tier-config.yml");
+            ItemTierConfigs = YamlUtils.DeserializeYaml<ItemTierConfig>(itemTierConfigYaml);
 
             _logger.LogInformation("Configurations loaded successfully from Blob Storage.");
         }
@@ -106,48 +160,5 @@ public class PlannerService : IPlannerService
             _logger.LogError(ex, "Failed to load configurations.");
             throw;
         }
-    }
-
-    private bool IsEligibleForDeployment(PlatformMetadata platformMetadata, Guid workspaceId)
-    {
-        // Retrieve the workspace configuration
-        var workspaceConfig = WorkspaceConfigs.Workspaces.FirstOrDefault(w => w.Id == workspaceId);
-        if (workspaceConfig == null)
-        {
-            _logger.LogWarning("Workspace ID {WorkspaceId} not found in configurations.", workspaceId);
-            return false;
-        }
-
-        // Get the tier for the workspace
-        var tier = workspaceConfig.Tier;
-        if (string.IsNullOrEmpty(tier))
-        {
-            _logger.LogWarning("Workspace ID {WorkspaceId} does not have a valid tier.", workspaceId);
-            return false;
-        }
-
-        // Check if the tier has the required item type
-        if (!ItemTierConfigs.Tiers.TryGetValue(tier, out var tierConfig))
-        {
-            _logger.LogWarning("Tier {Tier} is not defined in the item tier configurations.", tier);
-            return false;
-        }
-
-        // Check if the item type exists in the tier's Items dictionary
-        if (!tierConfig.Items.TryGetValue(platformMetadata.Metadata.Type, out var allowedItems))
-        {
-            _logger.LogInformation("Item type {Type} is not allowed in tier {Tier}.", platformMetadata.Metadata.Type, tier);
-            return false;
-        }
-
-        // Check if the item name or logicalId exists in the allowed items
-        if (allowedItems.Contains(platformMetadata.Metadata.DisplayName))
-        {
-            _logger.LogInformation("Item {ItemName} of type {Type} is eligible for deployment to workspace {WorkspaceId}.", platformMetadata.Metadata.DisplayName, platformMetadata.Metadata.Type, workspaceId);
-            return true;
-        }
-
-        _logger.LogInformation("Item {ItemName} of type {Type} is not eligible for deployment to workspace {WorkspaceId}.", platformMetadata.Metadata.DisplayName, platformMetadata.Metadata.Type, workspaceId);
-        return false;
     }
 }

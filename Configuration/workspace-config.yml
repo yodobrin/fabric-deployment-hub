@@ -1,6 +1,6 @@
 workspaces:
-  - name: Workspace1
-    id: workspace-001
+  - name: feature6-11
+    id: 4aca0508-e966-40a7-a2a2-84861b281c83
     type: dev
     tier: bronze
     parameters:
@@ -12,9 +12,22 @@ workspaces:
     settings:
       itemSpecificSetting: ITEM_SPECIFIC_SETTING_NAME
 
-  - name: Workspace2
-    id: workspace-002
+  - name: firstvnet
+    id: a049b127-46c2-407c-b101-a472ab0cf7ee
     type: prod
+    tier: gold
+    parameters:
+      parameter1: prod_value1
+      parameter2: prod_value2
+    secrets:
+      apiKey: API_KEY_SECRET_NAME
+      dbConnectionString: DB_CONN_STRING_SECRET_NAME
+    settings:
+      itemSpecificSetting: PROD_ITEM_SPECIFIC_SETTING_NAME
+  
+  - name: testwithdolev
+    id: 3dc6d3ea-f6c5-41c6-b9f7-dbdadccfd76e
+    type: test
     tier: gold
     parameters:
       parameter1: prod_value1

@@ -3,6 +3,7 @@
 global using System;
 global using System.IO;
 global using System.Linq;
+global using System.Text;
 global using System.Collections.Generic;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.Extensions.Logging;
@@ -18,6 +19,7 @@ global using FabricDeploymentHub.Services;
 global using FabricDeploymentHub.Services.Deployment;
 global using FabricDeploymentHub.Controllers;
 global using FabricDeploymentHub.Interfaces;
+global using FabricDeploymentHub.Services.Utils;
 
 global using System.Threading.Tasks; // For Task and asynchronous programming
 global using Microsoft.Fabric.Api; // For FabricClient and its methods

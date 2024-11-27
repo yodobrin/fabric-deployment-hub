@@ -2,14 +2,14 @@ tiers:
   bronze:
     items:
       notebook:
-        - notebook-001
+        - A Sample Notebook5
       datapipeline:
         - datapipeline-001
 
   silver:
     items:
       notebook:
-        - notebook-001
+        - A Sample Notebook5
         - notebook-002
       datapipeline:
         - datapipeline-001
@@ -18,7 +18,7 @@ tiers:
   gold:
     items:
       notebook:
-        - notebook-001
+        - A Sample Notebook5
         - notebook-002
         - notebook-003
         - notebook-004

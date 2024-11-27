@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 
 namespace FabricDeploymentHub.Models;
 
@@ -27,4 +26,10 @@ public class TenantDeploymentRequest
     [MinLength(1, ErrorMessage = "At least one modified folder must be specified.")]
     [JsonPropertyName("modifiedFolders")]
     public List<string> ModifiedFolders { get; set; } = new();
+
+    /// <summary>
+    /// Flag to indicate if the plan should be saved.
+    /// </summary>
+    [JsonPropertyName("savePlan")]
+    public bool SavePlan { get; set; } = false;
 }
