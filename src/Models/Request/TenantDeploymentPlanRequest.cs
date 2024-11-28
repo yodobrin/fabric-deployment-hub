@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FabricDeploymentHub.Models;
+namespace FabricDeploymentHub.Models.Request;
 
-public class TenantDeploymentRequest
+public class TenantDeploymentPlanRequest
 {
     /// <summary>
     /// List of Workspace IDs where deployment is required.

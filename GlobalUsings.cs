@@ -14,6 +14,7 @@ global using YamlDotNet.Serialization.NamingConventions;
 global using FabricDeploymentHub.Models;
 global using FabricDeploymentHub.Models.Items;
 global using FabricDeploymentHub.Models.Response;
+global using FabricDeploymentHub.Models.Request;
 global using FabricDeploymentHub.Models.State;
 global using FabricDeploymentHub.Services;
 global using FabricDeploymentHub.Services.Deployment;

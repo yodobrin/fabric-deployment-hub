@@ -30,7 +30,7 @@ public class PlannerController : ControllerBase
     }
 
     [HttpPost("tenant-deployment-plan")]
-    public async Task<ActionResult<TenantDeploymentResponse>>  CreateTenantDeploymentPlan([FromBody] TenantDeploymentRequest request)
+    public async Task<ActionResult<TenantDeploymentPlanResponse>>  CreateTenantDeploymentPlan([FromBody] TenantDeploymentPlanRequest request)
     {
         if (request == null)
         {

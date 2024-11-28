@@ -24,9 +24,9 @@ public class PlannerService : IPlannerService
     }
 
 
-    public async Task<TenantDeploymentResponse> PlanTenantDeploymentAsync(TenantDeploymentRequest tenantRequest)
+    public async Task<TenantDeploymentPlanResponse> PlanTenantDeploymentAsync(TenantDeploymentPlanRequest tenantRequest)
     {
-        var response = new TenantDeploymentResponse();
+        var response = new TenantDeploymentPlanResponse();
 
         // Validate the tenant request
         var validationErrors = ValidationUtils.ValidateTenantDeploymentRequest(tenantRequest);
@@ -40,7 +40,7 @@ public class PlannerService : IPlannerService
         // Process each workspace in the request
         foreach (var workspaceId in tenantRequest.WorkspaceIds)
         {
-            var workspaceResponse = new WorkspaceDeploymentResponse { WorkspaceId = workspaceId };
+            var workspaceResponse = new WorkspaceDeploymentPlanResponse { WorkspaceId = workspaceId };
 
             // Retrieve workspace configuration
             var workspaceConfig = WorkspaceUtils.GetWorkspaceConfig(WorkspaceConfigs, workspaceId, _logger);
@@ -50,7 +50,7 @@ public class PlannerService : IPlannerService
                 response.Workspaces.Add(workspaceResponse);
                 continue;
             }
-
+            var itemCount = 0;
             // Process each modified folder
             foreach (var folder in tenantRequest.ModifiedFolders)
             {
@@ -83,16 +83,20 @@ public class PlannerService : IPlannerService
                 {
                     _logger.LogInformation($"Deployment request created for item {platformMetadata.Metadata.DisplayName} of type {platformMetadata.Metadata.Type} for workspace {workspaceId}. ");
                     workspaceResponse.DeploymentRequests.Add(deploymentRequest);   
-                    workspaceResponse.Messages.Add($"Deployment planned for item {platformMetadata.Metadata.DisplayName} of type {platformMetadata.Metadata.Type} in workspace {workspaceId}.");                 
+                    workspaceResponse.Messages.Add($"Deployment planned for item {platformMetadata.Metadata.DisplayName} of type {platformMetadata.Metadata.Type} in workspace {workspaceId}.");
+                    itemCount++;
                 }
             }
-
+            // Add workspace response to the tenant response
             response.Workspaces.Add(workspaceResponse);
+            response.Messages.Add($"Deployment planned for workspace {workspaceId} with {itemCount} items.");
+            response.SavedContainerName = $"{tenantRequest.RepoContainer}-deployment-plan";
+            response.SavedPlanName = $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}";
         }
                 // Save to blob storage if required
         if (tenantRequest.SavePlan)
         {
-            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(_blobServiceClient, response, tenantRequest.RepoContainer, _logger);
+            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(_blobServiceClient, response, _logger);
         }
         return response;
     }

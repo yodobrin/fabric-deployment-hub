@@ -20,7 +20,7 @@ public class DeploymentsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Deploy([FromBody] TenantDeploymentRequest request)
+    public async Task<IActionResult> Deploy([FromBody] TenantDeploymentPlanRequest request)
     {
         try
         {

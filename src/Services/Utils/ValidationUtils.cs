@@ -1,7 +1,7 @@
 namespace FabricDeploymentHub.Services.Utils;
 public static class ValidationUtils
 {
-    public static List<string> ValidateTenantDeploymentRequest(TenantDeploymentRequest tenantRequest)
+    public static List<string> ValidateTenantDeploymentRequest(TenantDeploymentPlanRequest tenantRequest)
     {
         var issues = new List<string>();
 

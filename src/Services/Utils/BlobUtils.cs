@@ -121,59 +121,55 @@ public static class BlobUtils
         await blobClient.UploadAsync(stream, overwrite: true);
     }
 
-    public static async Task<TenantDeploymentResponse> SaveDeploymentPlanToBlobAsync(
+    public static async Task<TenantDeploymentPlanResponse> SaveDeploymentPlanToBlobAsync(
     BlobServiceClient blobServiceClient,
-    TenantDeploymentResponse response,
-    string repoContainerName,
+    TenantDeploymentPlanResponse response,
     ILogger logger)
+{
+    try
     {
-        // Generate the container name for the deployment plan
-        var deploymentPlanContainerName = $"{repoContainerName}-deployment-plan";
-
-        // Ensure the container name does not exceed 63 characters
-        if (deploymentPlanContainerName.Length > 63)
+        // Create or get the deployment plan container
+        var containerClient = blobServiceClient.GetBlobContainerClient(response.SavedContainerName);
+        await containerClient.CreateIfNotExistsAsync();
+        logger.LogInformation($"BlobUtils:SaveDeploymentPlanToBlobAsync| Created or accessed deployment plan in container: {response.SavedContainerName}, plan file: {response.SavedPlanName}");
+    
+        // Transform the response object for serialization
+        var transformedResponse = new
         {
-            deploymentPlanContainerName = $"{Guid.NewGuid()}-deployment-plan";
-            logger.LogWarning("BlobUtils:SaveDeploymentPlanToBlobAsync| Generated container name exceeded length limit. Using GUID-based name: {ContainerName}", deploymentPlanContainerName);
-        }
-
-        try
-        {
-            // Create or get the deployment plan container
-            var containerClient = blobServiceClient.GetBlobContainerClient(deploymentPlanContainerName);
-            await containerClient.CreateIfNotExistsAsync();
-            logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Created or accessed deployment plan container: {ContainerName}", deploymentPlanContainerName);
-
-            // Iterate through the workspaces in the response
-            foreach (var workspace in response.Workspaces)
+            workspaces = response.Workspaces.Select(workspace => new
             {
-                var workspaceFolder = $"{workspace.WorkspaceId}";
+                workspaceId = workspace.WorkspaceId,
+                deploymentRequests = workspace.DeploymentRequests.Select(request => request.GeneratePayload()),
+                issues = workspace.Issues,
+                hasErrors = workspace.HasErrors,
+                messages = workspace.Messages
+            }),
+            issues = response.Issues,
+            hasErrors = response.HasErrors,
+            savedContainerName = response.SavedContainerName,
+            savedPlanName = response.SavedPlanName ?? $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}.json",
+            savedTimestamp = response.SavedTimestamp ?? DateTime.UtcNow,
+            messages = response.Messages
+        };
 
-                // Iterate through deployment requests and organize by type
-                foreach (var request in workspace.DeploymentRequests)
-                {
-                    var typeFolder = request.GetType().Name; // Use the class name as the type folder
-                    var blobPath = $"{workspaceFolder}/{typeFolder}/{Guid.NewGuid()}.json";
+        // Serialize the transformed response
+        var serializedResponse = JsonSerializer.Serialize(transformedResponse, new JsonSerializerOptions { WriteIndented = true });
 
-                    // Serialize the payload for saving
-                    var payload = JsonSerializer.Serialize(request.GeneratePayload());
-                    logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Saving deployment request for workspace {WorkspaceId} to blob {BlobPath}", workspace.WorkspaceId, blobPath);
-                    await UploadBlobContentAsync(containerClient, blobPath, payload);
-                    
-                }
-            }
+        // Save the serialized plan to Blob Storage
+        var savedPlanName = transformedResponse.savedPlanName;
+        await UploadBlobContentAsync(containerClient, savedPlanName, serializedResponse);
+        logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Deployment plan saved successfully to blob: {BlobName}", savedPlanName);
 
-            // Add metadata about the saved plan to the response
-            response.SavedContainerName = deploymentPlanContainerName;
-            response.SavedTimestamp = DateTime.UtcNow;
+        // Update the response object with the saved plan details
+        response.SavedPlanName = savedPlanName;
+        response.SavedTimestamp = transformedResponse.savedTimestamp;
 
-            logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Deployment plan saved successfully to container: {ContainerName}", deploymentPlanContainerName);
-            return response;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "BlobUtils:SaveDeploymentPlanToBlobAsync| Failed to save deployment plan to Blob Storage.");
-            throw;
-        }
+        return response;
     }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "BlobUtils:SaveDeploymentPlanToBlobAsync| Failed to save deployment plan to Blob Storage.");
+        throw;
+    }
+}
 }

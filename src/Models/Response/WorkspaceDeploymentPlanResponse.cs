@@ -1,7 +1,7 @@
 namespace FabricDeploymentHub.Models.Response;
 
 
-public class WorkspaceDeploymentResponse
+public class WorkspaceDeploymentPlanResponse
 {
     public Guid WorkspaceId { get; set; }
     public List<IDeploymentRequest> DeploymentRequests { get; set; } = new List<IDeploymentRequest>();
