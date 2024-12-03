@@ -8,7 +8,7 @@ public class TenantDeploymentRequest
     /// Indicates whether to use a pre-saved deployment plan.
     /// </summary>
     [JsonPropertyName("useSavedPlan")]
-    public bool UseSavedPlan { get; set; } = false;
+    public bool UseSavedPlan { get; set; } = true;
 
     /// <summary>
     /// The name of the repository container in Blob Storage.
@@ -19,9 +19,8 @@ public class TenantDeploymentRequest
     public string RepoContainer { get; set; } = string.Empty;
 
     /// <summary>
-    /// List of workspaces and their corresponding deployment requests.
-    /// Required when not using a saved plan.
+    /// Name of the plan file.    
     /// </summary>
-    [JsonPropertyName("workspaces")]
-    public List<WorkspaceDeploymentRequest> Workspaces { get; set; } = new();
+    [JsonPropertyName("planFile")]
+    public string PlanFile { get; set; } = string.Empty;
 }

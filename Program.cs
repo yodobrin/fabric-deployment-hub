@@ -24,16 +24,13 @@ if (string.IsNullOrEmpty(configurationContainer) ||
 
 Console.WriteLine($"Configuration Loaded: \n Config Container: {configurationContainer}\n Tenant: {azureTenant}\n ClientId: {fabricClientId} \n CodeStoreUri: {fabricCodeStoreUri}");
 
-
-
 // Define authority and scopes
 string authority = $"https://login.microsoftonline.com/{azureTenant}";
-// string[] scopes = new[] { "https://fabric.microsoft.com/.default" };
-string[] scopes = new string[] { "https://api.fabric.microsoft.com/.default" };
+string[] scopes = new[] { "https://api.fabric.microsoft.com/.default" };
 
 // Register TokenService
 builder.Services.AddSingleton<ITokenService>(new TokenService(fabricClientId, fabricClientSecret, authority, scopes));
-builder.Services.AddScoped<DeploymentProcessor>();
+
 // Register BlobServiceClient as a singleton
 builder.Services.AddSingleton(_ =>
 {
@@ -51,7 +48,6 @@ builder.Services.AddSingleton(_ =>
 
         // Log successful creation
         Console.WriteLine($"Successfully created BlobServiceClient using Managed Identity: {hubManagedIdentity}");
-        
         return blobServiceClient;
     }
     catch (Exception ex)
@@ -61,21 +57,31 @@ builder.Services.AddSingleton(_ =>
     }
 });
 
-// Register PlannerService with the BlobServiceClient and configuration container name
+// Register FabricTenantStateService
+builder.Services.AddSingleton<IFabricTenantStateService, FabricTenantStateService>(provider =>
+{
+    var logger = provider.GetRequiredService<ILogger<FabricTenantStateService>>();
+    var blobServiceClient = provider.GetRequiredService<BlobServiceClient>();
+    return new FabricTenantStateService( blobServiceClient, configurationContainer,logger);
+});
+builder.Services.AddScoped<DeploymentProcessor>();
+// Register PlannerService
 builder.Services.AddSingleton<IPlannerService>(provider =>
 {
     var logger = provider.GetRequiredService<ILogger<PlannerService>>();
     var blobServiceClient = provider.GetRequiredService<BlobServiceClient>();
-    return new PlannerService(logger, blobServiceClient, configurationContainer);
+    var tenantStateService = provider.GetRequiredService<IFabricTenantStateService>();
+    return new PlannerService(logger, blobServiceClient, tenantStateService);
+    
 });
 
-// Register WorkspaceStateService
-builder.Services.AddSingleton<IWorkspaceStateService, WorkspaceStateService>();
+// Register FabricTenantStateService
+builder.Services.AddSingleton<IFabricTenantStateService, FabricTenantStateService>();
 
 // Register FabricRestService
 builder.Services.AddHttpClient<IFabricRestService, FabricRestService>();
 
-// Add other services and middleware as needed
+// Add controllers and middleware
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

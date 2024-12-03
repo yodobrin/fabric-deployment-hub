@@ -19,6 +19,48 @@ public static class BlobUtils
         await UploadBlobContentAsync(blobClient, content);
     }
 
+    public static async Task<TenantDeploymentPlanResponse?> LoadDeploymentPlanFromBlobAsync(
+        BlobServiceClient blobServiceClient,
+        string containerName,
+        string fileName,
+        ILogger logger)
+    {
+        try
+        {
+            // Get the container client
+            var containerClient = GetContainerClient(blobServiceClient, containerName);
+
+            // Ensure the file exists
+            var blobClient = containerClient.GetBlobClient(fileName);
+            if (!await blobClient.ExistsAsync())
+            {
+                logger.LogWarning("BlobUtils:LoadDeploymentPlanFromBlobAsync| File {FileName} does not exist in container {ContainerName}.", fileName, containerName);
+                return null;
+            }
+
+            // Download and deserialize the blob content
+            var content = await DownloadBlobContentAsync(blobClient);
+            var deploymentPlan = JsonSerializer.Deserialize<TenantDeploymentPlanResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true // To handle potential case mismatches in serialized JSON
+            });
+
+            if (deploymentPlan == null)
+            {
+                logger.LogWarning("BlobUtils:LoadDeploymentPlanFromBlobAsync| Failed to deserialize deployment plan from blob {FileName}.", fileName);
+                return null;
+            }
+
+            logger.LogInformation("BlobUtils:LoadDeploymentPlanFromBlobAsync| Successfully loaded deployment plan from {FileName}.", fileName);
+            return deploymentPlan;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "BlobUtils:LoadDeploymentPlanFromBlobAsync| Error loading deployment plan from blob {FileName}.", fileName);
+            throw;
+        }
+    }
+
     public static async Task<PlatformMetadata?> ParsePlatformMetadataAsync(BlobContainerClient blobContainerClient, string folder, ILogger logger)
     {
         try
@@ -125,51 +167,51 @@ public static class BlobUtils
     BlobServiceClient blobServiceClient,
     TenantDeploymentPlanResponse response,
     ILogger logger)
-{
-    try
     {
-        // Create or get the deployment plan container
-        var containerClient = blobServiceClient.GetBlobContainerClient(response.SavedContainerName);
-        await containerClient.CreateIfNotExistsAsync();
-        logger.LogInformation($"BlobUtils:SaveDeploymentPlanToBlobAsync| Created or accessed deployment plan in container: {response.SavedContainerName}, plan file: {response.SavedPlanName}");
-    
-        // Transform the response object for serialization
-        var transformedResponse = new
+        try
         {
-            workspaces = response.Workspaces.Select(workspace => new
+            // Create or get the deployment plan container
+            var containerClient = blobServiceClient.GetBlobContainerClient(response.SavedContainerName);
+            await containerClient.CreateIfNotExistsAsync();
+            logger.LogInformation($"BlobUtils:SaveDeploymentPlanToBlobAsync| Created or accessed deployment plan in container: {response.SavedContainerName}, plan file: {response.SavedPlanName}");
+        
+            // Transform the response object for serialization
+            var transformedResponse = new
             {
-                workspaceId = workspace.WorkspaceId,
-                deploymentRequests = workspace.DeploymentRequests.Select(request => request.GeneratePayload()),
-                issues = workspace.Issues,
-                hasErrors = workspace.HasErrors,
-                messages = workspace.Messages
-            }),
-            issues = response.Issues,
-            hasErrors = response.HasErrors,
-            savedContainerName = response.SavedContainerName,
-            savedPlanName = response.SavedPlanName ?? $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}.json",
-            savedTimestamp = response.SavedTimestamp ?? DateTime.UtcNow,
-            messages = response.Messages
-        };
+                workspaces = response.Workspaces.Select(workspace => new
+                {
+                    workspaceId = workspace.WorkspaceId,
+                    deploymentRequests = workspace.DeploymentRequests.Select(request => request.GeneratePayload()),
+                    issues = workspace.Issues,
+                    hasErrors = workspace.HasErrors,
+                    messages = workspace.Messages
+                }),
+                issues = response.Issues,
+                hasErrors = response.HasErrors,
+                savedContainerName = response.SavedContainerName,
+                savedPlanName = response.SavedPlanName ?? $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}.json",
+                savedTimestamp = response.SavedTimestamp ?? DateTime.UtcNow,
+                messages = response.Messages
+            };
 
-        // Serialize the transformed response
-        var serializedResponse = JsonSerializer.Serialize(transformedResponse, new JsonSerializerOptions { WriteIndented = true });
+            // Serialize the transformed response
+            var serializedResponse = JsonSerializer.Serialize(transformedResponse, new JsonSerializerOptions { WriteIndented = true });
 
-        // Save the serialized plan to Blob Storage
-        var savedPlanName = transformedResponse.savedPlanName;
-        await UploadBlobContentAsync(containerClient, savedPlanName, serializedResponse);
-        logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Deployment plan saved successfully to blob: {BlobName}", savedPlanName);
+            // Save the serialized plan to Blob Storage
+            var savedPlanName = transformedResponse.savedPlanName;
+            await UploadBlobContentAsync(containerClient, savedPlanName, serializedResponse);
+            logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Deployment plan saved successfully to blob: {BlobName}", savedPlanName);
 
-        // Update the response object with the saved plan details
-        response.SavedPlanName = savedPlanName;
-        response.SavedTimestamp = transformedResponse.savedTimestamp;
+            // Update the response object with the saved plan details
+            response.SavedPlanName = savedPlanName;
+            response.SavedTimestamp = transformedResponse.savedTimestamp;
 
-        return response;
+            return response;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "BlobUtils:SaveDeploymentPlanToBlobAsync| Failed to save deployment plan to Blob Storage.");
+            throw;
+        }
     }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "BlobUtils:SaveDeploymentPlanToBlobAsync| Failed to save deployment plan to Blob Storage.");
-        throw;
-    }
-}
 }

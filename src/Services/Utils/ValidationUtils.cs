@@ -11,10 +11,10 @@ public static class ValidationUtils
             return issues;
         }
 
-        if (tenantRequest.WorkspaceIds == null || !tenantRequest.WorkspaceIds.Any())
-        {
-            issues.Add("No workspace IDs provided in the request.");
-        }
+        // if (tenantRequest.WorkspaceIds == null || !tenantRequest.WorkspaceIds.Any())
+        // {
+        //     issues.Add("No workspace IDs provided in the request.");
+        // }
 
         if (tenantRequest.ModifiedFolders == null || !tenantRequest.ModifiedFolders.Any())
         {

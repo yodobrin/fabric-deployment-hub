@@ -10,6 +10,7 @@ public abstract class BaseDeployRequest : IDeploymentRequest
 
     [JsonPropertyName("targetWorkspaceId")]
     public Guid TargetWorkspaceId { get; set; }
+    public string Validation { get; set; } = "pending";
 
     public virtual object GeneratePayload()
     {
@@ -18,7 +19,8 @@ public abstract class BaseDeployRequest : IDeploymentRequest
         {
             displayName = DisplayName,
             description = Description,
-            targetWorkspaceId = TargetWorkspaceId
+            targetWorkspaceId = TargetWorkspaceId,
+            validation = Validation
         };
     }
 }

@@ -7,10 +7,10 @@ public class TenantDeploymentPlanRequest
     /// <summary>
     /// List of Workspace IDs where deployment is required.
     /// </summary>
-    [Required]
-    [MinLength(1, ErrorMessage = "At least one Workspace ID must be provided.")]
-    [JsonPropertyName("workspaceIds")]
-    public List<Guid> WorkspaceIds { get; set; } = new();
+    // [Required]
+    // [MinLength(1, ErrorMessage = "At least one Workspace ID must be provided.")]
+    // [JsonPropertyName("workspaceIds")]
+    // public List<Guid> WorkspaceIds { get; set; } = new();
 
     /// <summary>
     /// The name of the repository container in Blob Storage.

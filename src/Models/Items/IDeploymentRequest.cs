@@ -5,6 +5,7 @@ public interface IDeploymentRequest
     string DisplayName { get; set; }
     string Description { get; set; }
     Guid TargetWorkspaceId { get; set; }
+    string Validation { get; set; }
 
     /// <summary>
     /// Generates the JSON-compatible payload for the deployment request.
