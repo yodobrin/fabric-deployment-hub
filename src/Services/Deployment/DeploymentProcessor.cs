@@ -15,22 +15,23 @@ public class DeploymentProcessor
     {
         try
         {
-            
-            // Construct the endpoint URI using the workspace ID - this is ONLY for notebook, need to revisit to dynamically create the uri
-            var endpointUri = $"workspaces/{deploymentRequest.TargetWorkspaceId}/notebooks"; // Adjust for other item types if needed
-
-            // Generate the payload
+            if (string.IsNullOrWhiteSpace(deploymentRequest.DisplayName) ||
+                deploymentRequest.TargetWorkspaceId == Guid.Empty)
+            {
+                throw new ArgumentException("Deployment request is missing required fields.");
+            }
+            // TODO: change to be generic or add more switch cases for other item types
+            var uri = $"workspaces/{deploymentRequest.TargetWorkspaceId}/notebooks";
             var payload = deploymentRequest.GeneratePayload();
+            var sanitizedPayload = deploymentRequest.SanitizePayload();
+            _logger.LogInformation("Validating payload for deployment request: {Payload}", JsonSerializer.Serialize(sanitizedPayload, new JsonSerializerOptions { WriteIndented = true }));
 
-            // Log the request
-            _logger.LogInformation("Sending deployment request to {EndpointUri}", endpointUri);
-
-            // Call the Fabric REST API
-            var response = await _fabricRestService.PostAsync(endpointUri, payload, waitForCompletion: true);
-
-            // Log and return the response
-            _logger.LogInformation("Deployment response: {Response}", response);
-            return response;
+            return await _fabricRestService.PostAsync(uri, payload, waitForCompletion: true);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid deployment request.");
+            throw;
         }
         catch (Exception ex)
         {

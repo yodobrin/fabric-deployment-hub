@@ -42,7 +42,8 @@ public static class BlobUtils
             var content = await DownloadBlobContentAsync(blobClient);
             var deploymentPlan = JsonSerializer.Deserialize<TenantDeploymentPlanResponse>(content, new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true // To handle potential case mismatches in serialized JSON
+                PropertyNameCaseInsensitive = true, // To handle potential case mismatches in serialized JSON
+                Converters = { new DeploymentRequestConverter() }
             });
 
             if (deploymentPlan == null)

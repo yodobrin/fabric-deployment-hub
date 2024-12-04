@@ -77,7 +77,11 @@ builder.Services.AddSingleton<IPlannerService>(provider =>
 
 
 // Register FabricRestService
-builder.Services.AddHttpClient<IFabricRestService, FabricRestService>();
+builder.Services.AddHttpClient<IFabricRestService, FabricRestService>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AllowAutoRedirect = true
+    });
 
 // Add controllers and middleware
 builder.Services.AddControllers();
