@@ -75,8 +75,6 @@ builder.Services.AddSingleton<IPlannerService>(provider =>
     
 });
 
-// Register FabricTenantStateService
-builder.Services.AddSingleton<IFabricTenantStateService, FabricTenantStateService>();
 
 // Register FabricRestService
 builder.Services.AddHttpClient<IFabricRestService, FabricRestService>();
