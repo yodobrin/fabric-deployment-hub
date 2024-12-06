@@ -127,14 +127,21 @@ public class DeploymentsController : ControllerBase
         {
             _logger.LogWarning("Deployment completed with errors for some requests.");
             return StatusCode(207, new
-            {
-                message = "Deployment completed with errors. Check the errors for more details.",
-                errors = deploymentErrors
-            });
+                    {
+                        message = "Deployment completed with errors. Check the errors for more details.",
+                        errors = deploymentErrors,
+                        planFileName = request.PlanFile,
+                        container = request.RepoContainer
+                    });
         }
 
         _logger.LogInformation("Deployment process completed successfully for all requests.");
-        return Ok(new { message = "All deployment requests processed successfully." });
+        return Ok(new 
+                { 
+                    message = "All deployment requests processed successfully.", 
+                    planFileName = request.PlanFile, 
+                    container = request.RepoContainer 
+                });
     }
 
     private bool ValidateDeploymentRequest(IDeploymentRequest request)

@@ -17,6 +17,26 @@ public class FabricRestService : IFabricRestService
         _logger = logger;
     }
 
+    public async Task<List<FabricItem>> GetWorkspaceItemsAsync(Guid workspaceId)
+    {
+        string accessToken = await _tokenService.GetAccessTokenAsync();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var response = await _httpClient.GetAsync($"{_fabricApiBaseUri}workspaces/{workspaceId}/items");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Failed to fetch items for workspace {workspaceId}. Status code: {response.StatusCode}");
+        }
+
+        var jsonResponse = await response.Content.ReadAsStringAsync();
+        var fabricItems = JsonSerializer.Deserialize<FabricItemsResponse>(jsonResponse, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return fabricItems?.Value ?? new List<FabricItem>();
+    }
+
     public async Task<string> GetAsync(string uri)
     {
         try

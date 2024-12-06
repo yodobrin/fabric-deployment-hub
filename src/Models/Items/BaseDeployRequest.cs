@@ -2,6 +2,9 @@ namespace FabricDeploymentHub.Models.Items;
 
 public abstract class BaseDeployRequest : IDeploymentRequest
 {
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; } 
+    
     [JsonPropertyName("displayName")]
     public string DisplayName { get; set; } = string.Empty;
 
@@ -10,6 +13,8 @@ public abstract class BaseDeployRequest : IDeploymentRequest
 
     [JsonPropertyName("targetWorkspaceId")]
     public Guid TargetWorkspaceId { get; set; }
+    
+    [JsonPropertyName("validation")]
     public string Validation { get; set; } = "pending";
     
     [JsonPropertyName("type")]
@@ -23,7 +28,8 @@ public abstract class BaseDeployRequest : IDeploymentRequest
             description = Description,
             targetWorkspaceId = TargetWorkspaceId,
             validation = Validation,
-            type = Type
+            type = Type,
+            id = Id
         };
     }
     public virtual object SanitizePayload()
@@ -33,7 +39,8 @@ public abstract class BaseDeployRequest : IDeploymentRequest
             displayName = DisplayName,
             description = Description,
             targetWorkspaceId = TargetWorkspaceId,
-            validation = Validation
+            validation = Validation,
+            type = Type
         };
     }
 }

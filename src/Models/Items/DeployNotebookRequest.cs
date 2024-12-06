@@ -6,22 +6,26 @@ public class DeployNotebookRequest : BaseDeployRequest
 {
     [JsonPropertyName("definition")]
     public Definition Definition { get; set; } = new Definition();
+    
+    [JsonPropertyName("type")]
     public override string Type => "notebook";
     public override object GeneratePayload()
     {
         // Generate the payload matching the expected structure
         return new
         {
-            displayName = DisplayName, // Correct JSON property name
-            description = Description, // Correct JSON property name
+            displayName = DisplayName, 
+            description = Description, 
+            id = Id, 
             type = Type,
+            validation = Validation,
             definition = new
             {
                 parts = Definition.Parts.Select(part => new
                 {
-                    path = part.Path, // Matches the expected property name
-                    payload = part.Payload, // Matches the expected property name
-                    payloadType = part.PayloadType // Matches the expected property name
+                    path = part.Path, 
+                    payload = part.Payload, 
+                    payloadType = part.PayloadType
                 })
             }
         };
@@ -32,6 +36,9 @@ public class DeployNotebookRequest : BaseDeployRequest
         {
             displayName = DisplayName,
             description = Description,
+            id = Id,
+            type = Type,
+            validation = Validation,
             definition = new
             {
                 parts = Definition.Parts.Select(part => new

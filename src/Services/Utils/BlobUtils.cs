@@ -19,49 +19,6 @@ public static class BlobUtils
         await UploadBlobContentAsync(blobClient, content);
     }
 
-    public static async Task<TenantDeploymentPlanResponse?> LoadDeploymentPlanFromBlobAsync(
-        BlobServiceClient blobServiceClient,
-        string containerName,
-        string fileName,
-        ILogger logger)
-    {
-        try
-        {
-            // Get the container client
-            var containerClient = GetContainerClient(blobServiceClient, containerName);
-
-            // Ensure the file exists
-            var blobClient = containerClient.GetBlobClient(fileName);
-            if (!await blobClient.ExistsAsync())
-            {
-                logger.LogWarning("BlobUtils:LoadDeploymentPlanFromBlobAsync| File {FileName} does not exist in container {ContainerName}.", fileName, containerName);
-                return null;
-            }
-
-            // Download and deserialize the blob content
-            var content = await DownloadBlobContentAsync(blobClient);
-            var deploymentPlan = JsonSerializer.Deserialize<TenantDeploymentPlanResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true, // To handle potential case mismatches in serialized JSON
-                Converters = { new DeploymentRequestConverter() }
-            });
-
-            if (deploymentPlan == null)
-            {
-                logger.LogWarning("BlobUtils:LoadDeploymentPlanFromBlobAsync| Failed to deserialize deployment plan from blob {FileName}.", fileName);
-                return null;
-            }
-
-            logger.LogInformation("BlobUtils:LoadDeploymentPlanFromBlobAsync| Successfully loaded deployment plan from {FileName}.", fileName);
-            return deploymentPlan;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "BlobUtils:LoadDeploymentPlanFromBlobAsync| Error loading deployment plan from blob {FileName}.", fileName);
-            throw;
-        }
-    }
-
     public static async Task<PlatformMetadata?> ParsePlatformMetadataAsync(BlobContainerClient blobContainerClient, string folder, ILogger logger)
     {
         try
@@ -82,6 +39,79 @@ public static class BlobUtils
             logger.LogError(ex, "Failed to parse platform metadata for folder {Folder}.", folder);
             return null;
         }
+    }
+    public static async Task SaveValidatedPlanToBlobAsync(
+        BlobServiceClient blobServiceClient,
+        TenantDeploymentPlanResponse deploymentPlan,
+        string containerName,
+        string fileName,
+        ILogger logger)
+    {
+        await SavePlanToBlobAsync(
+            blobServiceClient,
+            deploymentPlan,
+            containerName,
+            fileName,
+            logger,
+            plan => new
+            {
+                workspaces = plan.Workspaces.Select(workspace => new
+                {
+                    workspaceId = workspace.WorkspaceId,
+                    deploymentRequests = workspace.DeploymentRequests.Select(request => request.GeneratePayload()), // Use GeneratePayload here
+                    issues = workspace.Issues,
+                    hasErrors = workspace.HasErrors,
+                    messages = workspace.Messages
+                }),
+                issues = plan.Issues,
+                hasErrors = plan.HasErrors,
+                savedContainerName = containerName,
+                savedPlanName = fileName,
+                savedTimestamp = DateTime.UtcNow,
+                messages = plan.Messages
+            }
+        );
+
+        logger.LogInformation("Validated deployment plan saved successfully to blob: {BlobName} in container {ContainerName}.", fileName, containerName);
+    }
+
+    public static async Task<TenantDeploymentPlanResponse> SaveDeploymentPlanToBlobAsync(
+        BlobServiceClient blobServiceClient,
+        TenantDeploymentPlanResponse response,
+        string containerName,
+        string fileName,
+        ILogger logger)
+    {
+        await SavePlanToBlobAsync(
+            blobServiceClient,
+            response,
+            containerName,
+            fileName,
+            logger,
+            plan => new
+            {
+                workspaces = plan.Workspaces.Select(workspace => new
+                {
+                    workspaceId = workspace.WorkspaceId,
+                    deploymentRequests = workspace.DeploymentRequests.Select(request => request.GeneratePayload()),
+                    issues = workspace.Issues,
+                    hasErrors = workspace.HasErrors,
+                    messages = workspace.Messages
+                }),
+                issues = plan.Issues,
+                hasErrors = plan.HasErrors,
+                savedContainerName = containerName,
+                savedPlanName = fileName,
+                savedTimestamp = DateTime.UtcNow,
+                messages = plan.Messages
+            }
+        );
+
+        // Update the original response object with the saved details
+        response.SavedPlanName = fileName;
+        response.SavedTimestamp = DateTime.UtcNow;
+
+        return response;
     }
 
     public static async Task<List<Part>> GetNotebookPartsAsync(BlobContainerClient blobContainerClient, string folder, ILogger logger)
@@ -126,8 +156,48 @@ public static class BlobUtils
 
         return notebookParts;
     }
+    public static async Task<TenantDeploymentPlanResponse?> LoadDeploymentPlanFromBlobAsync(
+        BlobServiceClient blobServiceClient,
+        string containerName,
+        string fileName,
+        ILogger logger)
+    {
+        try
+        {
+            // Get the container client
+            var containerClient = GetContainerClient(blobServiceClient, containerName);
 
-    // Private helper methods
+            // Ensure the file exists
+            var blobClient = containerClient.GetBlobClient(fileName);
+            if (!await blobClient.ExistsAsync())
+            {
+                logger.LogWarning("BlobUtils:LoadDeploymentPlanFromBlobAsync| File {FileName} does not exist in container {ContainerName}.", fileName, containerName);
+                return null;
+            }
+
+            // Download and deserialize the blob content
+            var content = await DownloadBlobContentAsync(blobClient);
+            var deploymentPlan = JsonSerializer.Deserialize<TenantDeploymentPlanResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true, // To handle potential case mismatches in serialized JSON
+                Converters = { new DeploymentRequestConverter() }
+            });
+
+            if (deploymentPlan == null)
+            {
+                logger.LogWarning("BlobUtils:LoadDeploymentPlanFromBlobAsync| Failed to deserialize deployment plan from blob {FileName}.", fileName);
+                return null;
+            }
+
+            logger.LogInformation("BlobUtils:LoadDeploymentPlanFromBlobAsync| Successfully loaded deployment plan from {FileName}.", fileName);
+            return deploymentPlan;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "BlobUtils:LoadDeploymentPlanFromBlobAsync| Error loading deployment plan from blob {FileName}.", fileName);
+            throw;
+        }
+    }
 
     private static async Task<string?> TryDownloadBlobContentAsync(BlobContainerClient containerClient, string blobName, ILogger? logger = null)
     {
@@ -150,6 +220,39 @@ public static class BlobUtils
             logger?.LogError(ex, "Failed to download content for blob {BlobName}.", blobName);
             return null;
         }
+    }    
+    private static async Task SavePlanToBlobAsync(
+        BlobServiceClient blobServiceClient,
+        TenantDeploymentPlanResponse deploymentPlan,
+        string containerName,
+        string fileName,
+        ILogger logger,
+        Func<TenantDeploymentPlanResponse, object> transformResponse)
+    {
+        try
+        {
+            var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+            await containerClient.CreateIfNotExistsAsync();
+
+            // Transform the response object for serialization
+            var transformedResponse = transformResponse(deploymentPlan);
+
+            // Serialize the transformed response
+            var serializedPlan = JsonSerializer.Serialize(transformedResponse, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = null // Preserve original property names
+            });
+
+            await UploadBlobContentAsync(containerClient, fileName, serializedPlan);
+
+            logger.LogInformation("Deployment plan saved to blob: {BlobName} in container: {ContainerName}.", fileName, containerName);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to save deployment plan to blob.");
+            throw;
+        }
     }
 
     private static async Task<string> DownloadBlobContentAsync(BlobClient blobClient)
@@ -162,57 +265,5 @@ public static class BlobUtils
     {
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         await blobClient.UploadAsync(stream, overwrite: true);
-    }
-
-    public static async Task<TenantDeploymentPlanResponse> SaveDeploymentPlanToBlobAsync(
-    BlobServiceClient blobServiceClient,
-    TenantDeploymentPlanResponse response,
-    ILogger logger)
-    {
-        try
-        {
-            // Create or get the deployment plan container
-            var containerClient = blobServiceClient.GetBlobContainerClient(response.SavedContainerName);
-            await containerClient.CreateIfNotExistsAsync();
-            logger.LogInformation($"BlobUtils:SaveDeploymentPlanToBlobAsync| Created or accessed deployment plan in container: {response.SavedContainerName}, plan file: {response.SavedPlanName}");
-        
-            // Transform the response object for serialization
-            var transformedResponse = new
-            {
-                workspaces = response.Workspaces.Select(workspace => new
-                {
-                    workspaceId = workspace.WorkspaceId,
-                    deploymentRequests = workspace.DeploymentRequests.Select(request => request.GeneratePayload()),
-                    issues = workspace.Issues,
-                    hasErrors = workspace.HasErrors,
-                    messages = workspace.Messages
-                }),
-                issues = response.Issues,
-                hasErrors = response.HasErrors,
-                savedContainerName = response.SavedContainerName,
-                savedPlanName = response.SavedPlanName ?? $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}.json",
-                savedTimestamp = response.SavedTimestamp ?? DateTime.UtcNow,
-                messages = response.Messages
-            };
-
-            // Serialize the transformed response
-            var serializedResponse = JsonSerializer.Serialize(transformedResponse, new JsonSerializerOptions { WriteIndented = true });
-
-            // Save the serialized plan to Blob Storage
-            var savedPlanName = transformedResponse.savedPlanName;
-            await UploadBlobContentAsync(containerClient, savedPlanName, serializedResponse);
-            logger.LogInformation("BlobUtils:SaveDeploymentPlanToBlobAsync| Deployment plan saved successfully to blob: {BlobName}", savedPlanName);
-
-            // Update the response object with the saved plan details
-            response.SavedPlanName = savedPlanName;
-            response.SavedTimestamp = transformedResponse.savedTimestamp;
-
-            return response;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "BlobUtils:SaveDeploymentPlanToBlobAsync| Failed to save deployment plan to Blob Storage.");
-            throw;
-        }
     }
 }

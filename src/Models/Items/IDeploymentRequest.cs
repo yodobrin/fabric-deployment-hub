@@ -2,6 +2,7 @@ namespace FabricDeploymentHub.Models.Items;
 
 public interface IDeploymentRequest
 {
+    Guid Id { get; set; }
     string DisplayName { get; set; }
     string Description { get; set; }
     Guid TargetWorkspaceId { get; set; }

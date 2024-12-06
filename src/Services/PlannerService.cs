@@ -50,7 +50,7 @@ public class PlannerService : IPlannerService
         // save the plan to blob storage if required
         if (tenantRequest.SavePlan)
         {
-            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(_blobServiceClient, response, _logger);
+            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(_blobServiceClient, response, response.SavedContainerName, response.SavedPlanName, _logger);
 
         }
 
