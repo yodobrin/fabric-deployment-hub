@@ -113,7 +113,60 @@ public static class BlobUtils
 
         return response;
     }
+    public static async Task<List<Part>> GetItemPartsAsync(
+        BlobContainerClient blobContainerClient, 
+        string folder, 
+        string itemType,
+        ILogger logger,
+        IDictionary<string, string>? parameters = null,
+        IDictionary<string, string>? secrets = null,
+        IDictionary<string, string>? settings = null)
+    {
+        var itemParts = new List<Part>();
+        var requiredFiles = GetRequiredFilesForType(itemType);
+        // null check:
+        parameters ??= new Dictionary<string, string>();
+        secrets ??= new Dictionary<string, string>();
+        settings ??= new Dictionary<string, string>();
+        foreach (var fileName in requiredFiles)
+        {
+            var blobPath = $"{folder}/{fileName}";
 
+            try
+            {
+                logger.LogInformation("BlobUtils:GetItemPartsAsync| Checking for blob: {BlobPath}", blobPath);
+
+                var blobContent = await TryDownloadBlobContentAsync(blobContainerClient, blobPath, logger);
+
+                if (blobContent != null)
+                {
+                    logger.LogInformation("BlobUtils:GetItemPartsAsync| Content found for {BlobPath}, length={Length}", blobPath, blobContent.Length);
+
+                    // Replace placeholders
+                    var processedContent = ItemContentProcessor.ReplacePlaceholders(blobContent, parameters, secrets, settings, logger);
+
+                    itemParts.Add(new Part
+                    {
+                        Path = fileName,
+                        Payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(processedContent)),
+                        PayloadType = "InlineBase64"
+                    });
+
+                    logger.LogInformation("BlobUtils:GetItemPartsAsync| Successfully processed content for {BlobPath}.", blobPath);
+                }
+                else
+                {
+                    logger.LogWarning("BlobUtils:GetItemPartsAsync| Blob {BlobPath} does not exist.", blobPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "BlobUtils:GetItemPartsAsync| Error processing blob {BlobPath}.", blobPath);
+            }
+        }
+
+        return itemParts;
+    }
     public static async Task<List<Part>> GetNotebookPartsAsync(BlobContainerClient blobContainerClient, string folder, ILogger logger)
     {
         var notebookParts = new List<Part>();
@@ -197,6 +250,17 @@ public static class BlobUtils
             logger.LogError(ex, "BlobUtils:LoadDeploymentPlanFromBlobAsync| Error loading deployment plan from blob {FileName}.", fileName);
             throw;
         }
+    }
+
+    private static string[] GetRequiredFilesForType(string itemType)
+    {
+        return itemType.ToLower() switch
+        {
+            "notebook" => new[] { ".platform", "notebook-content.py" },
+            "lakehouse" => new[] { ".platform", "lakehouse-metadata.json" },
+            "pipeline" => new[] { ".platform", "pipeline-definition.json", "config.yml" },
+            _ => throw new NotSupportedException($"Unknown item type: {itemType}")
+        };
     }
 
     private static async Task<string?> TryDownloadBlobContentAsync(BlobContainerClient containerClient, string blobName, ILogger? logger = null)

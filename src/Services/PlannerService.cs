@@ -92,7 +92,11 @@ public class PlannerService : IPlannerService
                     platformMetadata,
                     folder,
                     workspaceId,
-                    BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer), _logger);
+                    BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer), 
+                    workspaceConfig.Parameters,
+                    workspaceConfig.Secrets,
+                    workspaceConfig.Settings,
+                    _logger);
             if(deploymentRequest == null)
             {
                 workspaceResponse.Issues.Add($"Failed to create deployment request for item {platformMetadata.Metadata.DisplayName} in workspace {workspaceId}.");
