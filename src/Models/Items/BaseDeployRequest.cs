@@ -3,8 +3,8 @@ namespace FabricDeploymentHub.Models.Items;
 public abstract class BaseDeployRequest : IDeploymentRequest
 {
     [JsonPropertyName("id")]
-    public Guid Id { get; set; } 
-    
+    public Guid Id { get; set; }
+
     [JsonPropertyName("displayName")]
     public string DisplayName { get; set; } = string.Empty;
 
@@ -13,12 +13,13 @@ public abstract class BaseDeployRequest : IDeploymentRequest
 
     [JsonPropertyName("targetWorkspaceId")]
     public Guid TargetWorkspaceId { get; set; }
-    
+
     [JsonPropertyName("validation")]
     public string Validation { get; set; } = "pending";
-    
+
     [JsonPropertyName("type")]
     public abstract string Type { get; }
+
     public virtual object GeneratePayload()
     {
         // Base implementation for shared fields
@@ -32,6 +33,7 @@ public abstract class BaseDeployRequest : IDeploymentRequest
             id = Id
         };
     }
+
     public virtual object SanitizePayload()
     {
         return new

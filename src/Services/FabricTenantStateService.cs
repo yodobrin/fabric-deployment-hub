@@ -1,4 +1,5 @@
 namespace FabricDeploymentHub.Services;
+
 public class FabricTenantStateService : IFabricTenantStateService
 {
     private readonly BlobServiceClient _blobServiceClient;
@@ -6,7 +7,12 @@ public class FabricTenantStateService : IFabricTenantStateService
     private readonly ILogger<FabricTenantStateService> _logger;
     private WorkspaceConfigList? _workspaceConfigs;
     private ItemTierConfig? _itemTierConfigs;
-        public FabricTenantStateService(BlobServiceClient blobServiceClient, string configurationContainerName, ILogger<FabricTenantStateService> logger)
+
+    public FabricTenantStateService(
+        BlobServiceClient blobServiceClient,
+        string configurationContainerName,
+        ILogger<FabricTenantStateService> logger
+    )
     {
         _blobServiceClient = blobServiceClient;
         _configurationContainerName = configurationContainerName;
@@ -17,14 +23,23 @@ public class FabricTenantStateService : IFabricTenantStateService
     {
         try
         {
-            var containerClient = BlobUtils.GetContainerClient(_blobServiceClient, _configurationContainerName);
+            var containerClient = BlobUtils.GetContainerClient(
+                _blobServiceClient,
+                _configurationContainerName
+            );
 
             // Load Workspace Configurations
-            var workspaceConfigYaml = await BlobUtils.DownloadBlobContentAsync(containerClient, "workspace-config.yml");
+            var workspaceConfigYaml = await BlobUtils.DownloadBlobContentAsync(
+                containerClient,
+                "workspace-config.yml"
+            );
             _workspaceConfigs = YamlUtils.DeserializeYaml<WorkspaceConfigList>(workspaceConfigYaml);
 
             // Load Item Tier Configurations
-            var itemTierConfigYaml = await BlobUtils.DownloadBlobContentAsync(containerClient, "item-tier-config.yml");
+            var itemTierConfigYaml = await BlobUtils.DownloadBlobContentAsync(
+                containerClient,
+                "item-tier-config.yml"
+            );
             _itemTierConfigs = YamlUtils.DeserializeYaml<ItemTierConfig>(itemTierConfigYaml);
 
             _logger.LogInformation("Configurations successfully loaded from Blob Storage.");
@@ -35,13 +50,10 @@ public class FabricTenantStateService : IFabricTenantStateService
             throw;
         }
     }
-    private static readonly List<string> SupportedItemTypes = new()
-    {
-        "notebook",
-        "datapipeline",
-        "dataset",
-        "report"
-    };
+
+    private static readonly List<string> SupportedItemTypes =
+        new() { "notebook", "datapipeline", "dataset", "report" };
+
     public async Task<List<Guid>> GetAllWorkspacesAsync()
     {
         if (_workspaceConfigs == null)
@@ -81,7 +93,4 @@ public class FabricTenantStateService : IFabricTenantStateService
 
         return _itemTierConfigs!;
     }
-
-    
-
 }

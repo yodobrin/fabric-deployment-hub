@@ -1,4 +1,3 @@
-
 namespace FabricDeploymentHub.Models.Items;
 
 public class Part
@@ -6,7 +5,7 @@ public class Part
     [JsonPropertyName("path")]
     public string Path { get; set; } = string.Empty;
 
-    [JsonPropertyName("payload")] 
+    [JsonPropertyName("payload")]
     public string Payload { get; set; } = string.Empty;
 
     [JsonPropertyName("payloadType")]

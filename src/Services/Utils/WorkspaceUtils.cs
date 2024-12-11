@@ -2,23 +2,30 @@ namespace FabricDeploymentHub.Services.Utils;
 
 public static class WorkspaceUtils
 {
-        public static bool IsEligibleForDeployment(
+    public static bool IsEligibleForDeployment(
         PlatformMetadata platformMetadata,
         Guid workspaceId,
         WorkspaceConfig workspaceConfig,
         ItemTierConfig itemTierConfigs,
-        ILogger logger)
+        ILogger logger
+    )
     {
         if (workspaceConfig == null)
         {
-            logger.LogWarning("Workspace ID {WorkspaceId} not found in configurations.", workspaceId);
+            logger.LogWarning(
+                "Workspace ID {WorkspaceId} not found in configurations.",
+                workspaceId
+            );
             return false;
         }
 
         var tier = workspaceConfig.Tier;
         if (string.IsNullOrEmpty(tier))
         {
-            logger.LogWarning("Workspace ID {WorkspaceId} does not have a valid tier.", workspaceId);
+            logger.LogWarning(
+                "Workspace ID {WorkspaceId} does not have a valid tier.",
+                workspaceId
+            );
             return false;
         }
 
@@ -28,14 +35,27 @@ public static class WorkspaceUtils
             return false;
         }
 
-        logger.LogInformation("Checking eligibility of item {ItemName} of type {Type} for deployment to workspace {WorkspaceId}.", platformMetadata.Metadata.DisplayName, platformMetadata.Metadata.Type, workspaceId);
+        logger.LogInformation(
+            "Checking eligibility of item {ItemName} of type {Type} for deployment to workspace {WorkspaceId}.",
+            platformMetadata.Metadata.DisplayName,
+            platformMetadata.Metadata.Type,
+            workspaceId
+        );
 
         // Log allowed item types for the tier
-        logger.LogInformation("Allowed item types for tier {Tier}: {AllowedItemTypes}", tier, string.Join(", ", tierConfig.Items.Keys));
+        logger.LogInformation(
+            "Allowed item types for tier {Tier}: {AllowedItemTypes}",
+            tier,
+            string.Join(", ", tierConfig.Items.Keys)
+        );
 
         if (!tierConfig.Items.TryGetValue(platformMetadata.Metadata.Type, out var allowedItems))
         {
-            logger.LogInformation("Item type {Type} is not allowed in tier {Tier}.", platformMetadata.Metadata.Type, tier);
+            logger.LogInformation(
+                "Item type {Type} is not allowed in tier {Tier}.",
+                platformMetadata.Metadata.Type,
+                tier
+            );
             return false;
         }
 
@@ -58,20 +78,26 @@ public static class WorkspaceUtils
         );
         return false;
     }
+
     public static bool IsEligibleForDeployment(
         PlatformMetadata platformMetadata,
         Guid workspaceId,
         WorkspaceConfigList workspaceConfigs,
         ItemTierConfig itemTierConfigs,
-        ILogger logger)
+        ILogger logger
+    )
     {
         var workspaceConfig = GetWorkspaceConfig(workspaceConfigs, workspaceId, logger);
-        if (workspaceConfig == null) return false;
+        if (workspaceConfig == null)
+            return false;
 
         var tier = workspaceConfig.Tier;
         if (string.IsNullOrEmpty(tier))
         {
-            logger.LogWarning("Workspace ID {WorkspaceId} does not have a valid tier.", workspaceId);
+            logger.LogWarning(
+                "Workspace ID {WorkspaceId} does not have a valid tier.",
+                workspaceId
+            );
             return false;
         }
 
@@ -80,12 +106,25 @@ public static class WorkspaceUtils
             logger.LogWarning("Tier {Tier} is not defined in the item tier configurations.", tier);
             return false;
         }
-        logger.LogInformation("Checking eligibility of item {ItemName} of type {Type} for deployment to workspace {WorkspaceId}.", platformMetadata.Metadata.DisplayName, platformMetadata.Metadata.Type, workspaceId);
+        logger.LogInformation(
+            "Checking eligibility of item {ItemName} of type {Type} for deployment to workspace {WorkspaceId}.",
+            platformMetadata.Metadata.DisplayName,
+            platformMetadata.Metadata.Type,
+            workspaceId
+        );
         // print the allowed items for the tier
-       logger.LogInformation("Allowed item types for tier {Tier}: {AllowedItemTypes}", tier, string.Join(", ", tierConfig.Items.Keys));
+        logger.LogInformation(
+            "Allowed item types for tier {Tier}: {AllowedItemTypes}",
+            tier,
+            string.Join(", ", tierConfig.Items.Keys)
+        );
         if (!tierConfig.Items.TryGetValue(platformMetadata.Metadata.Type, out var allowedItems))
         {
-            logger.LogInformation("Item type {Type} is not allowed in tier {Tier}.", platformMetadata.Metadata.Type, tier);
+            logger.LogInformation(
+                "Item type {Type} is not allowed in tier {Tier}.",
+                platformMetadata.Metadata.Type,
+                tier
+            );
             return false;
         }
 
@@ -109,12 +148,19 @@ public static class WorkspaceUtils
         return false;
     }
 
-    public static WorkspaceConfig? GetWorkspaceConfig(WorkspaceConfigList workspaceConfigs, Guid workspaceId, ILogger logger)
+    public static WorkspaceConfig? GetWorkspaceConfig(
+        WorkspaceConfigList workspaceConfigs,
+        Guid workspaceId,
+        ILogger logger
+    )
     {
         var workspaceConfig = workspaceConfigs.Workspaces.FirstOrDefault(w => w.Id == workspaceId);
         if (workspaceConfig == null)
         {
-            logger.LogWarning("Workspace ID {WorkspaceId} not found in configurations.", workspaceId);
+            logger.LogWarning(
+                "Workspace ID {WorkspaceId} not found in configurations.",
+                workspaceId
+            );
         }
         return workspaceConfig;
     }

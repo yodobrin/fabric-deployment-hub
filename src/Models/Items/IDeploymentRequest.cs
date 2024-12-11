@@ -14,6 +14,7 @@ public interface IDeploymentRequest
     /// </summary>
     /// <returns>An object representing the deployment payload.</returns>
     object GeneratePayload();
+
     /// <summary>
     /// Creates a sanitized version of the payload for logging purposes.
     /// </summary>

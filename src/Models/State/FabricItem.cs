@@ -1,4 +1,5 @@
 namespace FabricDeploymentHub.Models.State;
+
 public class FabricItem
 {
     [JsonPropertyName("id")]

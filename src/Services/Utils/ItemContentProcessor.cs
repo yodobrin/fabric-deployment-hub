@@ -1,4 +1,5 @@
 namespace FabricDeploymentHub.Services.Utils;
+
 public static class ItemContentProcessor
 {
     /// <summary>
@@ -14,7 +15,8 @@ public static class ItemContentProcessor
         IDictionary<string, string> parameters,
         IDictionary<string, string> secrets,
         IDictionary<string, string> settings,
-        ILogger logger)
+        ILogger logger
+    )
     {
         textContent = ReplaceWithDictionary(textContent, "{{parameter_", parameters);
         textContent = ReplaceWithDictionary(textContent, "{{secret_", secrets);
@@ -22,7 +24,11 @@ public static class ItemContentProcessor
         return textContent;
     }
 
-    private static string ReplaceWithDictionary(string content, string prefix, IDictionary<string, string> values)
+    private static string ReplaceWithDictionary(
+        string content,
+        string prefix,
+        IDictionary<string, string> values
+    )
     {
         foreach (var kvp in values)
         {

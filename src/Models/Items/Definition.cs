@@ -1,4 +1,3 @@
-
 namespace FabricDeploymentHub.Models.Items;
 
 public class Definition

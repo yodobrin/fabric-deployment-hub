@@ -5,7 +5,10 @@ public class DeploymentProcessor
     private readonly IFabricRestService _fabricRestService;
     private readonly ILogger<DeploymentProcessor> _logger;
 
-    public DeploymentProcessor(IFabricRestService fabricRestService, ILogger<DeploymentProcessor> logger)
+    public DeploymentProcessor(
+        IFabricRestService fabricRestService,
+        ILogger<DeploymentProcessor> logger
+    )
     {
         _fabricRestService = fabricRestService;
         _logger = logger;
@@ -16,7 +19,10 @@ public class DeploymentProcessor
         try
         {
             // Validate common fields
-            if (string.IsNullOrWhiteSpace(deploymentRequest.DisplayName) || deploymentRequest.TargetWorkspaceId == Guid.Empty)
+            if (
+                string.IsNullOrWhiteSpace(deploymentRequest.DisplayName)
+                || deploymentRequest.TargetWorkspaceId == Guid.Empty
+            )
             {
                 throw new ArgumentException("Deployment request is missing required fields.");
             }
@@ -32,7 +38,8 @@ public class DeploymentProcessor
 
                 default:
                     // Log and return a message for unsupported validation types
-                    var errorMessage = $"Deployment cannot proceed for item {deploymentRequest.DisplayName}. Validation status: {deploymentRequest.Validation}.";
+                    var errorMessage =
+                        $"Deployment cannot proceed for item {deploymentRequest.DisplayName}. Validation status: {deploymentRequest.Validation}.";
                     _logger.LogWarning(errorMessage);
                     throw new InvalidOperationException(errorMessage);
             }
@@ -56,7 +63,13 @@ public class DeploymentProcessor
         var payload = deploymentRequest.GeneratePayload();
         var sanitizedPayload = deploymentRequest.SanitizePayload();
 
-        _logger.LogInformation("Creating new item. Payload: {Payload}", JsonSerializer.Serialize(sanitizedPayload, new JsonSerializerOptions { WriteIndented = true }));
+        _logger.LogInformation(
+            "Creating new item. Payload: {Payload}",
+            JsonSerializer.Serialize(
+                sanitizedPayload,
+                new JsonSerializerOptions { WriteIndented = true }
+            )
+        );
         return await _fabricRestService.PostAsync(uri, payload, waitForCompletion: true);
     }
 
@@ -64,21 +77,39 @@ public class DeploymentProcessor
     {
         if (deploymentRequest.Id == Guid.Empty)
         {
-            var errorMessage = $"Cannot update item {deploymentRequest.DisplayName} in workspace {deploymentRequest.TargetWorkspaceId} because the Id is missing or invalid.";
+            var errorMessage =
+                $"Cannot update item {deploymentRequest.DisplayName} in workspace {deploymentRequest.TargetWorkspaceId} because the Id is missing or invalid.";
             _logger.LogError(errorMessage);
             throw new InvalidOperationException(errorMessage);
         }
 
         // Update-specific URI
-        var uri = BuildUri(deploymentRequest.Type, deploymentRequest.TargetWorkspaceId, deploymentRequest.Id, isUpdate: true);
+        var uri = BuildUri(
+            deploymentRequest.Type,
+            deploymentRequest.TargetWorkspaceId,
+            deploymentRequest.Id,
+            isUpdate: true
+        );
         var payload = deploymentRequest.GeneratePayload();
         var sanitizedPayload = deploymentRequest.SanitizePayload();
 
-        _logger.LogInformation("Updating item {Id}. Payload: {Payload}", deploymentRequest.Id, JsonSerializer.Serialize(sanitizedPayload, new JsonSerializerOptions { WriteIndented = true }));
+        _logger.LogInformation(
+            "Updating item {Id}. Payload: {Payload}",
+            deploymentRequest.Id,
+            JsonSerializer.Serialize(
+                sanitizedPayload,
+                new JsonSerializerOptions { WriteIndented = true }
+            )
+        );
         return await _fabricRestService.PostAsync(uri, payload, waitForCompletion: true);
     }
 
-    private string BuildUri(string itemType, Guid workspaceId, Guid? itemId = null, bool isUpdate = false)
+    private string BuildUri(
+        string itemType,
+        Guid workspaceId,
+        Guid? itemId = null,
+        bool isUpdate = false
+    )
     {
         // Map item type to endpoint
         var endpoint = itemType.ToLower() switch

@@ -1,4 +1,3 @@
-
 namespace FabricDeploymentHub.Models.Response;
 
 public class TenantDeploymentPlanResponse
@@ -7,7 +6,8 @@ public class TenantDeploymentPlanResponse
     /// List of workspace-specific deployment plans.
     /// </summary>
     [JsonPropertyName("workspaces")]
-    public List<WorkspaceDeploymentPlanResponse> Workspaces { get; set; } = new List<WorkspaceDeploymentPlanResponse>();
+    public List<WorkspaceDeploymentPlanResponse> Workspaces { get; set; } =
+        new List<WorkspaceDeploymentPlanResponse>();
 
     /// <summary>
     /// General issues with the tenant request.

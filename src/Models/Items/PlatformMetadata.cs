@@ -1,4 +1,5 @@
 namespace FabricDeploymentHub.Models.Items;
+
 public class PlatformMetadata
 {
     [JsonPropertyName("metadata")]

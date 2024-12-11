@@ -1,4 +1,5 @@
 namespace FabricDeploymentHub.Models.State;
+
 public class DeployedItem
 {
     /// <summary>

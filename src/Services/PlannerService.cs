@@ -1,4 +1,3 @@
-
 namespace FabricDeploymentHub.Services;
 
 public class PlannerService : IPlannerService
@@ -10,14 +9,17 @@ public class PlannerService : IPlannerService
     public PlannerService(
         ILogger<PlannerService> logger,
         BlobServiceClient blobServiceClient,
-        IFabricTenantStateService tenantStateService)
+        IFabricTenantStateService tenantStateService
+    )
     {
         _logger = logger;
         _blobServiceClient = blobServiceClient;
         _tenantStateService = tenantStateService;
     }
 
-    public async Task<TenantDeploymentPlanResponse> PlanTenantDeploymentAsync(TenantDeploymentPlanRequest tenantRequest)
+    public async Task<TenantDeploymentPlanResponse> PlanTenantDeploymentAsync(
+        TenantDeploymentPlanRequest tenantRequest
+    )
     {
         var response = new TenantDeploymentPlanResponse();
 
@@ -26,7 +28,10 @@ public class PlannerService : IPlannerService
         if (validationErrors.Any())
         {
             response.Issues.AddRange(validationErrors);
-            _logger.LogError("Validation failed for TenantDeploymentRequest: {ValidationErrors}", validationErrors);
+            _logger.LogError(
+                "Validation failed for TenantDeploymentRequest: {ValidationErrors}",
+                validationErrors
+            );
             return response;
         }
 
@@ -41,23 +46,33 @@ public class PlannerService : IPlannerService
                 response.Issues.Add($"Failed to plan deployment for workspace {workspaceId}.");
                 continue;
             }
-            response.Messages.Add($"Deployment planned for workspace {workspaceId} with {workspaceResponse.DeploymentRequests.Count} items.");
+            response.Messages.Add(
+                $"Deployment planned for workspace {workspaceId} with {workspaceResponse.DeploymentRequests.Count} items."
+            );
             response.Workspaces.Add(workspaceResponse);
         }
-        
+
         response.SavedContainerName = $"{tenantRequest.RepoContainer}-deployment-plan";
-        response.SavedPlanName = $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}";        
+        response.SavedPlanName = $"tenant-plan-{DateTime.UtcNow:yyyyMMddHHmmss}";
         // save the plan to blob storage if required
         if (tenantRequest.SavePlan)
         {
-            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(_blobServiceClient, response, response.SavedContainerName, response.SavedPlanName, _logger);
-
+            response = await BlobUtils.SaveDeploymentPlanToBlobAsync(
+                _blobServiceClient,
+                response,
+                response.SavedContainerName,
+                response.SavedPlanName,
+                _logger
+            );
         }
 
         return response;
     }
 
-    private async Task<WorkspaceDeploymentPlanResponse> PlanWorkspaceDeploymentAsync(TenantDeploymentPlanRequest tenantRequest, Guid workspaceId)
+    private async Task<WorkspaceDeploymentPlanResponse> PlanWorkspaceDeploymentAsync(
+        TenantDeploymentPlanRequest tenantRequest,
+        Guid workspaceId
+    )
     {
         var workspaceResponse = new WorkspaceDeploymentPlanResponse { WorkspaceId = workspaceId };
         var workspaceConfig = await _tenantStateService.GetWorkspaceConfigAsync(workspaceId);
@@ -65,46 +80,66 @@ public class PlannerService : IPlannerService
 
         if (workspaceConfig == null)
         {
-            workspaceResponse.Issues.Add($"Workspace ID {workspaceId} not found in configurations.");
+            workspaceResponse.Issues.Add(
+                $"Workspace ID {workspaceId} not found in configurations."
+            );
             return workspaceResponse;
         }
 
         foreach (var folder in tenantRequest.ModifiedFolders)
         {
             var platformMetadata = await BlobUtils.ParsePlatformMetadataAsync(
-                    BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer),
-                    folder,
-                    _logger);
+                BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer),
+                folder,
+                _logger
+            );
             // Check eligibility for deployment
             if (platformMetadata == null)
             {
                 workspaceResponse.Issues.Add($"Invalid or missing metadata in folder: {folder}.");
                 continue;
             }
-            if (!WorkspaceUtils.IsEligibleForDeployment(platformMetadata, workspaceId, workspaceConfig ,itemTierConfig, _logger))
+            if (
+                !WorkspaceUtils.IsEligibleForDeployment(
+                    platformMetadata,
+                    workspaceId,
+                    workspaceConfig,
+                    itemTierConfig,
+                    _logger
+                )
+            )
             {
-                workspaceResponse.Issues.Add($"Item {platformMetadata.Metadata.DisplayName} is not eligible for deployment to workspace {workspaceId}.");
+                workspaceResponse.Issues.Add(
+                    $"Item {platformMetadata.Metadata.DisplayName} is not eligible for deployment to workspace {workspaceId}."
+                );
                 continue;
             }
-            workspaceResponse.Messages.Add($"Item {platformMetadata.Metadata.DisplayName} is eligible for deployment to workspace {workspaceId}.");
+            workspaceResponse.Messages.Add(
+                $"Item {platformMetadata.Metadata.DisplayName} is eligible for deployment to workspace {workspaceId}."
+            );
             // Create deployment request for eligible items
             var deploymentRequest = await DeploymentRequestFactory.CreateDeploymentRequestAsync(
-                    platformMetadata,
-                    folder,
-                    workspaceId,
-                    BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer), 
-                    workspaceConfig.Parameters,
-                    workspaceConfig.Secrets,
-                    workspaceConfig.Settings,
-                    _logger);
-            if(deploymentRequest == null)
+                platformMetadata,
+                folder,
+                workspaceId,
+                BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer),
+                workspaceConfig.Parameters,
+                workspaceConfig.Secrets,
+                workspaceConfig.Settings,
+                _logger
+            );
+            if (deploymentRequest == null)
             {
-                workspaceResponse.Issues.Add($"Failed to create deployment request for item {platformMetadata.Metadata.DisplayName} in workspace {workspaceId}.");
+                workspaceResponse.Issues.Add(
+                    $"Failed to create deployment request for item {platformMetadata.Metadata.DisplayName} in workspace {workspaceId}."
+                );
                 continue;
             }
 
             workspaceResponse.DeploymentRequests.Add(deploymentRequest);
-            workspaceResponse.Messages.Add($"Planned deployment for {platformMetadata.Metadata.DisplayName} in workspace {workspaceId}.");
+            workspaceResponse.Messages.Add(
+                $"Planned deployment for {platformMetadata.Metadata.DisplayName} in workspace {workspaceId}."
+            );
         }
 
         return workspaceResponse;

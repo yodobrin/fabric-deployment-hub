@@ -1,8 +1,8 @@
 namespace FabricDeploymentHub.Interfaces;
+
 public interface IFabricTenantStateService
 {
-    
-        /// <summary>
+    /// <summary>
     /// Retrieves the list of all workspaces for the tenant.
     /// </summary>
     /// <returns>A list of workspace IDs.</returns>
@@ -23,5 +23,5 @@ public interface IFabricTenantStateService
     /// <summary>
     /// Retrieves item tier configurations for the tenant.
     /// </summary>
-    Task<ItemTierConfig> GetItemTierConfigsAsync();    
+    Task<ItemTierConfig> GetItemTierConfigsAsync();
 }

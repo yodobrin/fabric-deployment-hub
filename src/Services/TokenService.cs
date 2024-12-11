@@ -1,5 +1,3 @@
-
-
 namespace FabricDeploymentHub.Services;
 
 public class TokenService : ITokenService
@@ -10,7 +8,8 @@ public class TokenService : ITokenService
 
     public TokenService(string clientId, string clientSecret, string authority, string[] scopes)
     {
-        _app = ConfidentialClientApplicationBuilder.Create(clientId)
+        _app = ConfidentialClientApplicationBuilder
+            .Create(clientId)
             .WithClientSecret(clientSecret)
             .WithAuthority(authority)
             .Build();

@@ -19,7 +19,7 @@ public class TenantDeploymentRequest
     public string RepoContainer { get; set; } = string.Empty;
 
     /// <summary>
-    /// Name of the plan file.    
+    /// Name of the plan file.
     /// </summary>
     [JsonPropertyName("planFile")]
     public string PlanFile { get; set; } = string.Empty;
