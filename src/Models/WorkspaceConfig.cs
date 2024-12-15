@@ -6,9 +6,7 @@ public class WorkspaceConfig
     public Guid Id { get; set; }
     public string Type { get; set; } = string.Empty; // dev, test, prod
     public string Tier { get; set; } = string.Empty; // bronze, silver, gold
-    public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>();
-    public Dictionary<string, string> Secrets { get; set; } = new Dictionary<string, string>();
-    public Dictionary<string, string> Settings { get; set; } = new Dictionary<string, string>();
+    public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>(); // Unified configuration
 }
 
 public class WorkspaceConfigList

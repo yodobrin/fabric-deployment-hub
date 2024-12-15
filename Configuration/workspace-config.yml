@@ -3,37 +3,28 @@ workspaces:
     id: 4aca0508-e966-40a7-a2a2-84861b281c83
     type: dev
     tier: bronze
-    parameters:
-      parameter1: value1
-      parameter2: value2
-    secrets:
-      apiKey: API_KEY_SECRET_NAME
-      dbConnectionString: DB_CONN_STRING_SECRET_NAME
-    settings:
-      itemSpecificSetting: ITEM_SPECIFIC_SETTING_NAME
+    variables:
+      parameter_row_num: 142
+      secret_storage_account: KEY_SECRET_NAME_1
+      setting_concurrency: 42
+      setting_key_vault_name: ydeu2aml6491325893
 
   - name: firstvnet
     id: a049b127-46c2-407c-b101-a472ab0cf7ee
     type: prod
     tier: gold
-    parameters:
-      parameter1: prod_value1
-      parameter2: prod_value2
-    secrets:
-      apiKey: API_KEY_SECRET_NAME
-      dbConnectionString: DB_CONN_STRING_SECRET_NAME
-    settings:
-      itemSpecificSetting: PROD_ITEM_SPECIFIC_SETTING_NAME
+    variables:
+      parameter_row_num: 100
+      secret_storage_account: KEY_SECRET_NAME_3
+      setting_concurrency: 43
+      setting_key_vault_name: ydeu2aml6491325893
   
   - name: testwithdolev
     id: 3dc6d3ea-f6c5-41c6-b9f7-dbdadccfd76e
     type: test
     tier: gold
-    parameters:
-      parameter1: prod_value1
-      parameter2: prod_value2
-    secrets:
-      apiKey: API_KEY_SECRET_NAME
-      dbConnectionString: DB_CONN_STRING_SECRET_NAME
-    settings:
-      itemSpecificSetting: PROD_ITEM_SPECIFIC_SETTING_NAME
+    variables:
+      parameter_row_num: 110
+      secret_storage_account: KEY_SECRET_NAME_4
+      setting_concurrency: 420
+      setting_key_vault_name: ydeu2aml6491325893

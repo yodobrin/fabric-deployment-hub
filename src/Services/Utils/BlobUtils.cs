@@ -156,17 +156,12 @@ public static class BlobUtils
         string folder,
         string itemType,
         ILogger logger,
-        IDictionary<string, string>? parameters = null,
-        IDictionary<string, string>? secrets = null,
-        IDictionary<string, string>? settings = null
+        IDictionary<string, string> variables // Unified dictionary for all variables
     )
     {
         var itemParts = new List<Part>();
         var requiredFiles = GetRequiredFilesForType(itemType);
-        // null check:
-        parameters ??= new Dictionary<string, string>();
-        secrets ??= new Dictionary<string, string>();
-        settings ??= new Dictionary<string, string>();
+
         foreach (var fileName in requiredFiles)
         {
             var blobPath = $"{folder}/{fileName}";
@@ -187,7 +182,7 @@ public static class BlobUtils
                 if (blobContent != null)
                 {
                     logger.LogInformation(
-                        "BlobUtils:GetItemPartsAsync| Content found for {BlobPath}, length={Length}",
+                        "BlobUtils:GetItemPartsAsync| Content found for {BlobPath}, length={Length} | Injecting variables.",
                         blobPath,
                         blobContent.Length
                     );
@@ -195,9 +190,7 @@ public static class BlobUtils
                     // Replace placeholders
                     var processedContent = ItemContentProcessor.ReplacePlaceholders(
                         blobContent,
-                        parameters,
-                        secrets,
-                        settings,
+                        variables,
                         logger
                     );
 

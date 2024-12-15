@@ -85,7 +85,14 @@ public class PlannerService : IPlannerService
             );
             return workspaceResponse;
         }
-
+        _logger.LogInformation(
+            "Workspace {WorkspaceId} has {VariableCount} total variables: {ParameterCount} parameters, {SettingCount} settings, and {SecretCount} secrets.",
+            workspaceId,
+            workspaceConfig.Variables.Count,
+            workspaceConfig.Variables.Count(kvp => kvp.Key.StartsWith("parameter_")),
+            workspaceConfig.Variables.Count(kvp => kvp.Key.StartsWith("setting_")),
+            workspaceConfig.Variables.Count(kvp => kvp.Key.StartsWith("secret_"))
+        );
         foreach (var folder in tenantRequest.ModifiedFolders)
         {
             var platformMetadata = await BlobUtils.ParsePlatformMetadataAsync(
@@ -123,9 +130,7 @@ public class PlannerService : IPlannerService
                 folder,
                 workspaceId,
                 BlobUtils.GetContainerClient(_blobServiceClient, tenantRequest.RepoContainer),
-                workspaceConfig.Parameters,
-                workspaceConfig.Secrets,
-                workspaceConfig.Settings,
+                workspaceConfig.Variables, // Pass the unified Variables dictionary
                 _logger
             );
             if (deploymentRequest == null)
@@ -144,27 +149,4 @@ public class PlannerService : IPlannerService
 
         return workspaceResponse;
     }
-
-    // private async Task LoadConfigurationsAsync()
-    // {
-    //     try
-    //     {
-    //         var containerClient = BlobUtils.GetContainerClient(_blobServiceClient, _configurationContainerName);
-
-    //         // Load Workspace Configurations
-    //         var workspaceConfigYaml = await BlobUtils.DownloadBlobContentAsync(containerClient, "workspace-config.yml");
-    //         WorkspaceConfigs = YamlUtils.DeserializeYaml<WorkspaceConfigList>(workspaceConfigYaml);
-
-    //         // Load Item Tier Configurations
-    //         var itemTierConfigYaml = await BlobUtils.DownloadBlobContentAsync(containerClient, "item-tier-config.yml");
-    //         ItemTierConfigs = YamlUtils.DeserializeYaml<ItemTierConfig>(itemTierConfigYaml);
-
-    //         _logger.LogInformation("Configurations loaded successfully from Blob Storage.");
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _logger.LogError(ex, "Failed to load configurations.");
-    //         throw;
-    //     }
-    // }
 }

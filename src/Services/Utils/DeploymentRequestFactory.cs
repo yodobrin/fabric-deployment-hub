@@ -7,9 +7,7 @@ public static class DeploymentRequestFactory
         string folder,
         Guid workspaceId,
         BlobContainerClient blobContainerClient,
-        IDictionary<string, string> parameters,
-        IDictionary<string, string> secrets,
-        IDictionary<string, string> settings,
+        IDictionary<string, string> variables, // Unified variables dictionary
         ILogger logger
     )
     {
@@ -28,9 +26,7 @@ public static class DeploymentRequestFactory
                             folder,
                             metadata.Metadata.Type,
                             logger,
-                            parameters,
-                            secrets,
-                            settings
+                            variables // Pass unified variables directly
                         )
                     }
                 },
