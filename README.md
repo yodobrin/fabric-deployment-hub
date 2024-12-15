@@ -35,6 +35,7 @@ This tool provides:
 ### Additional Resources
 
 For a detailed explanation of the **guiding principles** and **design guidelines** used in the Fabric Deployment Hub, refer to the [Design Principles](./design-principles.md) document.
+
 ---
 
 ### Key Features
