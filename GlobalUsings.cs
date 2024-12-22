@@ -16,11 +16,13 @@ global using FabricDeploymentHub.Models.Items;
 global using FabricDeploymentHub.Models.Response;
 global using FabricDeploymentHub.Models.Request;
 global using FabricDeploymentHub.Models.State;
+global using FabricDeploymentHub.Models.Binding;
 global using FabricDeploymentHub.Services;
 global using FabricDeploymentHub.Services.Deployment;
 global using FabricDeploymentHub.Controllers;
 global using FabricDeploymentHub.Interfaces;
 global using FabricDeploymentHub.Services.Utils;
+global using FabricDeploymentHub.Services.Binding;
 
 global using System.Threading.Tasks; // For Task and asynchronous programming
 global using Microsoft.Fabric.Api; // For FabricClient and its methods

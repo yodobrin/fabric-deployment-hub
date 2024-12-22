@@ -1,4 +1,4 @@
-namespace FabricDeploymentHub.Services;
+namespace FabricDeploymentHub.Interfaces;
 
 public interface IFabricRestService
 {

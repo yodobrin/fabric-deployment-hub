@@ -7,18 +7,21 @@ public class PlannerController : ControllerBase
     private readonly IPlannerService _plannerService;
     private readonly IFabricTenantStateService _tenantStateService;
     private readonly ITokenService _tokenService;
+    private readonly IDependencyBindingService _dependencyBindingService;
     private readonly ILogger<PlannerController> _logger;
 
     public PlannerController(
         IPlannerService plannerService,
         IFabricTenantStateService tenantStateService,
         ITokenService tokenService,
+        IDependencyBindingService dependencyBindingService,
         ILogger<PlannerController> logger
     )
     {
         _plannerService = plannerService;
         _tenantStateService = tenantStateService;
         _tokenService = tokenService;
+        _dependencyBindingService = dependencyBindingService;
         _logger = logger;
     }
 
@@ -47,7 +50,9 @@ public class PlannerController : ControllerBase
             if (!workspaceIds.Any())
             {
                 _logger.LogWarning("No workspaces found for the tenant.");
-                return BadRequest(new { message = "No workspaces available for planning." });
+                return UnprocessableEntity(
+                    new { message = "No workspaces available for planning." }
+                );
             }
 
             _logger.LogInformation(
@@ -86,28 +91,28 @@ public class PlannerController : ControllerBase
     /// <summary>
     /// Serializes the tenant deployment plan response. not used going forward was only used for test, consider removal.
     /// </summary>
-    private object SerializePlanResponse(TenantDeploymentPlanResponse response, bool savePlan)
-    {
-        return new
-        {
-            workspaces = response.Workspaces.Select(
-                workspace =>
-                    new
-                    {
-                        workspaceId = workspace.WorkspaceId,
-                        deploymentRequests = savePlan
-                            ? null
-                            : workspace.DeploymentRequests.Select(
-                                request => request.GeneratePayload()
-                            ),
-                        issues = workspace.Issues,
-                        hasErrors = workspace.HasErrors,
-                        messages = workspace.Messages
-                    }
-            ),
-            issues = response.Issues,
-            hasErrors = response.HasErrors,
-            messages = response.Messages
-        };
-    }
+    // private object SerializePlanResponse(TenantDeploymentPlanResponse response, bool savePlan)
+    // {
+    //     return new
+    //     {
+    //         workspaces = response.Workspaces.Select(
+    //             workspace =>
+    //                 new
+    //                 {
+    //                     workspaceId = workspace.WorkspaceId,
+    //                     deploymentRequests = savePlan
+    //                         ? null
+    //                         : workspace.DeploymentRequests.Select(
+    //                             request => request.GeneratePayload()
+    //                         ),
+    //                     issues = workspace.Issues,
+    //                     hasErrors = workspace.HasErrors,
+    //                     messages = workspace.Messages
+    //                 }
+    //         ),
+    //         issues = response.Issues,
+    //         hasErrors = response.HasErrors,
+    //         messages = response.Messages
+    //     };
+    // }
 }

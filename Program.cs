@@ -74,19 +74,28 @@ builder.Services.AddSingleton<IFabricTenantStateService, FabricTenantStateServic
 });
 builder.Services.AddScoped<DeploymentProcessor>();
 
+// Register FabricRestService
+builder.Services
+    .AddHttpClient<IFabricRestService, FabricRestService>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = true });
+
+// Register DependencyBindingService
+builder.Services.AddScoped<IDependencyBindingService, DependencyBindingService>();
+
 // Register PlannerService
 builder.Services.AddSingleton<IPlannerService>(provider =>
 {
     var logger = provider.GetRequiredService<ILogger<PlannerService>>();
     var blobServiceClient = provider.GetRequiredService<BlobServiceClient>();
     var tenantStateService = provider.GetRequiredService<IFabricTenantStateService>();
-    return new PlannerService(logger, blobServiceClient, tenantStateService);
+    var dependencyBindingService = provider.GetRequiredService<IDependencyBindingService>();
+    return new PlannerService(
+        logger,
+        blobServiceClient,
+        tenantStateService,
+        dependencyBindingService
+    );
 });
-
-// Register FabricRestService
-builder.Services
-    .AddHttpClient<IFabricRestService, FabricRestService>()
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = true });
 
 // Add controllers and middleware
 builder.Services.AddControllers();

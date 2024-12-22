@@ -29,36 +29,6 @@ public static class BlobUtils
         await UploadBlobContentAsync(blobClient, content);
     }
 
-    public static async Task<PlatformMetadata?> ParsePlatformMetadataAsync(
-        BlobContainerClient blobContainerClient,
-        string folder,
-        ILogger logger
-    )
-    {
-        try
-        {
-            var platformBlobPath = $"{folder}/.platform";
-            var platformContent = await TryDownloadBlobContentAsync(
-                blobContainerClient,
-                platformBlobPath,
-                logger
-            );
-
-            if (platformContent == null)
-            {
-                logger.LogWarning("Platform metadata file not found in folder {Folder}.", folder);
-                return null;
-            }
-
-            return JsonSerializer.Deserialize<PlatformMetadata>(platformContent);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to parse platform metadata for folder {Folder}.", folder);
-            return null;
-        }
-    }
-
     public static async Task SaveValidatedPlanToBlobAsync(
         BlobServiceClient blobServiceClient,
         TenantDeploymentPlanResponse deploymentPlan,
@@ -151,152 +121,80 @@ public static class BlobUtils
         return response;
     }
 
-    public static async Task<List<Part>> GetItemPartsAsync(
-        BlobContainerClient blobContainerClient,
-        string folder,
-        string itemType,
-        ILogger logger,
-        IDictionary<string, string> variables // Unified dictionary for all variables
-    )
-    {
-        var itemParts = new List<Part>();
-        var requiredFiles = GetRequiredFilesForType(itemType);
-
-        foreach (var fileName in requiredFiles)
-        {
-            var blobPath = $"{folder}/{fileName}";
-
-            try
-            {
-                logger.LogInformation(
-                    "BlobUtils:GetItemPartsAsync| Checking for blob: {BlobPath}",
-                    blobPath
-                );
-
-                var blobContent = await TryDownloadBlobContentAsync(
-                    blobContainerClient,
-                    blobPath,
-                    logger
-                );
-
-                if (blobContent != null)
-                {
-                    logger.LogInformation(
-                        "BlobUtils:GetItemPartsAsync| Content found for {BlobPath}, length={Length} | Injecting variables.",
-                        blobPath,
-                        blobContent.Length
-                    );
-
-                    // Replace placeholders
-                    var processedContent = ItemContentProcessor.ReplacePlaceholders(
-                        blobContent,
-                        variables,
-                        logger
-                    );
-
-                    itemParts.Add(
-                        new Part
-                        {
-                            Path = fileName,
-                            Payload = Convert.ToBase64String(
-                                Encoding.UTF8.GetBytes(processedContent)
-                            ),
-                            PayloadType = "InlineBase64"
-                        }
-                    );
-
-                    logger.LogInformation(
-                        "BlobUtils:GetItemPartsAsync| Successfully processed content for {BlobPath}.",
-                        blobPath
-                    );
-                }
-                else
-                {
-                    logger.LogWarning(
-                        "BlobUtils:GetItemPartsAsync| Blob {BlobPath} does not exist.",
-                        blobPath
-                    );
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex,
-                    "BlobUtils:GetItemPartsAsync| Error processing blob {BlobPath}.",
-                    blobPath
-                );
-            }
-        }
-
-        return itemParts;
-    }
-
-    public static async Task<List<Part>> GetNotebookPartsAsync(
+    public static async Task<Dictionary<string, string>> GetFolderContentsAsync(
         BlobContainerClient blobContainerClient,
         string folder,
         ILogger logger
     )
     {
-        var notebookParts = new List<Part>();
+        var folderContents = new Dictionary<string, string>();
 
-        // Define the required files for a notebook
-        var requiredFiles = new[] { ".platform", "notebook-content.py" };
-
-        foreach (var fileName in requiredFiles)
+        try
         {
-            var blobPath = $"{folder}/{fileName}";
+            logger.LogInformation("Fetching contents of folder: {Folder}", folder);
 
-            try
+            await foreach (var blobItem in blobContainerClient.GetBlobsAsync(prefix: folder + "/"))
             {
-                logger.LogInformation(
-                    "BlobUtils:GetNotebookPartsAsync| Checking for blob: {BlobPath}",
-                    blobPath
-                );
+                var blobPath = blobItem.Name;
+                // Extract the last part of the blob path (after the last '/') this would be used as the key in the dictionary
+                // This might be not valid for scenarios with sub folders which might be required to be added as payload - TBD.
+                var contentKey = blobPath.Contains('/')
+                    ? blobPath.Substring(blobPath.LastIndexOf('/') + 1)
+                    : blobPath;
 
-                var blobContent = await TryDownloadBlobContentAsync(
-                    blobContainerClient,
-                    blobPath,
-                    logger
-                );
+                var contentLength = blobItem.Properties?.ContentLength ?? 0;
 
-                if (blobContent != null)
-                {
-                    logger.LogInformation(
-                        $"BlobUtils:GetNotebookPartsAsync| content is not null, content length={blobContent.Length}"
-                    );
-                    notebookParts.Add(
-                        new Part
-                        {
-                            Path = fileName,
-                            Payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(blobContent)),
-                            PayloadType = "InlineBase64"
-                        }
-                    );
-
-                    logger.LogInformation(
-                        "BlobUtils:GetNotebookPartsAsync| Successfully added blob content for {BlobPath}.",
-                        blobPath
-                    );
-                }
-                else
+                // Skip blobs with ContentLength of 0 - in most scenarios these are folders.
+                if (contentLength == 0)
                 {
                     logger.LogWarning(
-                        "BlobUtils:GetNotebookPartsAsync|Blob {BlobPath} does not exist.",
+                        "Skipping read for blob {BlobPath} as its ContentLength is 0.",
                         blobPath
                     );
+                    continue; // Skip this item
+                }
+
+                logger.LogInformation(
+                    "Found blob: {BlobPath}, with type {BlobContentLength} registering in dict with key {ContentKey}",
+                    blobPath,
+                    contentLength,
+                    contentKey
+                );
+
+                try
+                {
+                    var content = await TryDownloadBlobContentAsync(
+                        blobContainerClient,
+                        blobPath,
+                        logger
+                    );
+
+                    if (content != null)
+                    {
+                        folderContents[contentKey] = content;
+                        logger.LogInformation(
+                            "Successfully read content for blob: {BlobPath}",
+                            blobPath
+                        );
+                    }
+                    else
+                    {
+                        logger.LogWarning("Failed to read content for blob: {BlobPath}", blobPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error reading content for blob: {BlobPath}", blobPath);
                 }
             }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex,
-                    "BlobUtils:GetNotebookPartsAsync| Error processing blob {BlobPath}.",
-                    blobPath
-                );
-            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to fetch contents of folder: {Folder}", folder);
+            throw;
         }
 
-        return notebookParts;
+        return folderContents;
     }
 
     public static async Task<TenantDeploymentPlanResponse?> LoadDeploymentPlanFromBlobAsync(
@@ -358,17 +256,6 @@ public static class BlobUtils
             );
             throw;
         }
-    }
-
-    private static string[] GetRequiredFilesForType(string itemType)
-    {
-        return itemType.ToLower() switch
-        {
-            "notebook" => new[] { ".platform", "notebook-content.py" },
-            "lakehouse" => new[] { ".platform", "lakehouse-metadata.json" },
-            "pipeline" => new[] { ".platform", "pipeline-definition.json", "config.yml" },
-            _ => throw new NotSupportedException($"Unknown item type: {itemType}")
-        };
     }
 
     private static async Task<string?> TryDownloadBlobContentAsync(
