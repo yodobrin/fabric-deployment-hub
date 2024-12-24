@@ -49,64 +49,190 @@ For a detailed explanation of the **guiding principles** and **design guidelines
 
 ## How
 
+```mermaid
+graph TD
+    A[Validate Tenant Request]-->B{Valid Request?};
+    B -- Yes --> C[Fetch Workspaces];
+    C-->D{Process Workspaces};
+    D -- Yes --> E[Create Deployment Plan];
+    E-->F[Save Deployment Plan];
+    B -- No --> G[Log Error];
+    D -- No --> G;
+
+    H[Validate Request]-->I{Valid PlanFile & RepoContainer?};
+    I -- Yes --> J[Load Deployment Plan];
+    J-->K{Validate Workspaces & Requests};
+    K-->L[Save Validated Plan];
+    L-->M[Return Results];
+    I -- No --> G;
+    J -- No --> G;
+    K -- No --> G;
+
+    N[Validate Request]-->O{Valid PlanFile & RepoContainer?};
+    O -- Yes --> P[Load Deployment Plan];
+    P-->Q{Process Workspaces};
+    Q-->R{Handle Deployment Requests};
+    R-->S{Handle Errors};
+    S-->T{Return Results};
+    O -- No --> G;
+    P -- No --> G;
+    Q -- No --> G;
+```
+
 ### Deployment Planning
 
-The **Fabric Deployment Planning Process** is designed to ensure that all resources within a tenant are properly evaluated and prepared for deployment. It follows a structured approach to validate configurations, resolve dependencies, and create deployment plans. The process is robust, handling errors gracefully to minimize the impact of issues on the overall planning.
-
----
+The **Fabric Deployment Planning Process** ensures that resources within a tenant are evaluated and prepared for deployment. It follows a structured approach to validate configurations, resolve dependencies, and create deployment plans while minimizing the impact of errors.
 
 #### Steps in the Planning Process
 
 1. **Validate Tenant Request**  
-   The process begins by validating the incoming tenant deployment request to ensure it meets the necessary criteria. Any validation errors are logged and surfaced as issues, halting further processing for invalid requests.
+   The process begins by validating the tenant deployment request. Validation errors are logged as issues, and further processing halts for invalid requests.
 
 2. **Fetch Workspaces**  
-   All workspaces associated with the tenant are retrieved to determine the scope of the deployment. This is done using an authenticated API call to the Fabric API.
+   All workspaces within the tenant are retrieved to determine the deployment scope. This step uses an authenticated API call to the Fabric API.
 
-3. **Plan Deployment for Each Workspace**  
+3. **Process Each Workspace**  
    For each workspace:
-   - Validate its configuration.
-   - Process each item (e.g., notebooks, files) within the workspace, including:
-     - Reading metadata.
-     - Resolving dependencies (e.g., Lakehouse, Environment).
-     - Replacing placeholders with resolved values. (settings, variables, etc.)
-     - Injecting resolved metadata into the content.
-     - Creating a deployment request for eligible items.
-   - If any critical issues are encountered, the workspace is marked as invalid, and no deployment plan is created for it.
+   - **Validate Configuration**: Ensure the workspace configuration is valid and complete. Any issues are logged, and invalid workspaces are excluded from planning.
+   - **Evaluate Items**: Process individual items (e.g., notebooks, files) within the workspace:
+     - **Read Metadata**: Extract metadata to understand item details and requirements.
+     - **Resolve Dependencies**: Identify and resolve dependencies, such as Lakehouse and Environment. Missing or unresolved dependencies are logged as issues, and the respective item is skipped.
+     - **Replace Placeholders**: Update item content with resolved values (e.g., settings, variables).
+     - **Inject Metadata**: Update the item with resolved dependencies and metadata.
+   - **Create Deployment Requests**: For items that pass validation, create deployment requests to include them in the workspace's deployment plan.
 
-   A saved plan would be created on a new storage container. A plan contains all the information required to run the deployment. Some of the information during the planning phase would be updated during validation phase.
+4. **Generate Deployment Plan**  
+   A deployment plan is created for each valid workspace. It includes:
+   - Eligible items that passed validation.
+   - Detailed logs of issues encountered during processing.
 
-4. **Handle Dependencies**  
-   Dependencies such as Lakehouse and Environment are resolved for each item:
-   - If a dependency is missing or invalid, it is logged as an issue, and the item is skipped. The reason for failure to obtain dependencies is logged, but less critical, as for all reasons the item is skipped.
-   - The process continues for other items in the workspace.
+5. **Save Deployment Plan**  
+   The deployment plan is saved to a designated storage location for validation and execution.
 
-5. **Generate Deployment Plan**  
-   For each valid workspace, a deployment plan is generated:
-   - Includes all eligible and validated items.
-   - Details any issues encountered during the planning process.
+---
+### Validate Deployment Plan
 
-6. **Save Deployment Plan** (Optional)  
-   If requested, the final deployment plan is saved to a designated storage location for validation and execution.
+The **Fabric Deployment Plan Validation Process** ensures that all items and workspaces defined in a deployment plan are valid, and prepares the plan for execution by identifying necessary updates, creations, or issues.
 
 ---
 
-#### Error Handling
+#### Steps in the Validation Process
 
-The planning process is designed to be fault-tolerant:
-- Errors at the item level (e.g., missing metadata, invalid dependencies) are logged, and the specific item is skipped.
-- Critical errors at the workspace level halt processing for that workspace, but other workspaces are processed independently.
-- The overall tenant planning continues unless the request itself is invalid.
+1. **Validate the Request**  
+   - Check that the request contains the required fields: `PlanFile` and `RepoContainer`.
+   - If any of these fields are missing or invalid, log a warning and return an error response.
+
+2. **Load the Deployment Plan**  
+   - Fetch the deployment plan from the specified blob storage container.
+   - If the plan cannot be found or loaded, log an appropriate error and return an error response.
+
+3. **Validate Workspaces and Deployment Requests**  
+   For each workspace in the deployment plan:
+   - **Fetch Workspace Items**: Retrieve existing items from the workspace using the Fabric API.
+   - **Validate Each Deployment Request**:
+     - Compare the `DisplayName` of the deployment request with existing workspace items.
+     - If the item exists, mark the deployment request as an **Update** and copy the existing item's ID.
+     - If the item does not exist, mark the deployment request as a **Create** and set the ID to empty.
+     - If an error occurs while fetching workspace items, mark all deployment requests for the workspace as **Error** and log the issue.
+
+4. **Save the Validated Plan**  
+   - Save the validated deployment plan back to the blob storage container with a filename prefixed by `validated-`.
+   - If the save operation fails, log the error and return a failure response.
+
+5. **Return Validation Results**  
+   - On successful validation, return a response containing the validated plan's filename and storage container.
+   - If any issues occur during the validation process, ensure they are logged and surfaced for review.
+
+---
+### Deploy a Plan
+
+The **Fabric Deployment Process** enables the execution of a validated deployment plan, ensuring all items and workspaces are deployed efficiently and correctly. This process handles individual deployment requests and gracefully manages errors to prevent the failure of unrelated deployments.
 
 ---
 
-#### Key Benefits
+#### Steps in the Deployment Process
 
-- **Resilient:** Ensures issues in one workspace or item do not affect others.
-- **Transparent:** Logs detailed messages and tracks issues for each folder, workspace, and item.
-- **Customizable:** Supports saving and reviewing deployment plans for validation and execution. 
+1. **Validate the Deployment Request**  
+   - Ensure the request includes the required fields: `PlanFile` and `RepoContainer`.
+   - Log and reject requests with missing or invalid fields.
 
-This approach ensures a reliable and efficient deployment planning process while highlighting and isolating any issues for further investigation.
+2. **Load the Deployment Plan**  
+   - Retrieve the deployment plan from blob storage.
+   - Validate the structure and content of the plan. If errors are found or the JSON structure is invalid:
+     - Return a detailed error response, including issues in the plan.
+
+3. **Process Each Workspace in the Plan**  
+   For each workspace:
+   - Log the start of deployment processing.
+   - Iterate through each deployment request in the workspace.
+
+4. **Handle Deployment Requests**  
+   For each deployment request:
+   - **Validate the Request**: Ensure required fields such as `DisplayName` and `TargetWorkspaceId` are present.
+   - **Determine the Action**:
+     - If the request is marked as `Create`, handle it via the `HandleCreateRequestAsync` method.
+     - If the request is marked as `Update`, handle it via the `HandleUpdateRequestAsync` method.
+     - If the request has an unsupported validation status, log the issue and skip the deployment.
+   - **Send the Request**: Use the appropriate API calls to execute the deployment action.
+
+5. **Handle Errors**  
+   - If a deployment request encounters an error, it is logged, and the specific deployment is skipped:
+     - **HTTP Errors**: Log and capture the details of HTTP-related issues.
+     - **Timeouts**: Capture and log timeout errors during the request.
+     - **Unexpected Errors**: Log and capture any unhandled exceptions.
+   - Errors for specific deployment requests are returned in the response for review.
+
+6. **Return Deployment Results**  
+   - If all deployment requests are successful, return a success response.
+   - If any errors occur, return a response with status `207` (Multi-Status) to indicate partial success, along with details of the errors.
+
+---
+
+### Error Handling
+
+The **Fabric Deployment Hub** ensures robust error handling across all stages of the process: planning, validation, and deployment. Errors are managed at multiple levels to isolate issues and allow other parts of the process to proceed independently.
+
+#### Levels of Error Handling
+
+- **Request-Level Errors**  
+  - If a tenant request is invalid (e.g., missing required fields or containing malformed data), the process halts immediately with a detailed error response.
+  - Example: Missing `PlanFile` or `RepoContainer`.
+
+- **Plan-Level Errors**  
+  - Invalid or unprocessable deployment plans are rejected with detailed error messages during both validation and deployment phases.
+  - Example: Deployment plans with structural issues or unresolvable dependencies are logged and returned for review.
+
+- **Workspace-Level Errors**  
+  - Errors in one workspace do not impact the processing of other workspaces.
+  - Example: If items cannot be fetched or dependencies cannot be resolved for a workspace, that workspace's deployment is skipped, while others proceed.
+
+- **Item-Level Errors**  
+  - Issues for specific items are logged, and the affected items are skipped without halting the process.
+  - Example: Missing metadata, unresolved dependencies, or API failures for individual items.
+
+---
+
+### Key Benefits
+
+The **Fabric Deployment Hub** provides few advantages during planning, validation, and deployment:
+
+- **Fault-Tolerant Execution**  
+  - Ensures that issues in one workspace or item do not disrupt the overall process.
+  - Granular error handling isolates problems at the item, workspace, and plan levels.
+
+- **Granular Validation and Deployment**  
+  - Each deployment request is validated and processed independently, ensuring resilience and minimizing cascading failures.
+
+- **Detailed Logging**  
+  - Comprehensive logs track issues and actions taken during planning, validation, and deployment phases, aiding in troubleshooting and transparency.
+
+- **Customizable Actions**  
+  - Supports operations like `Create` and `Update` with extensibility for new item types, making the system adaptable to changing needs.
+
+- **Transparent and Actionable Results**  
+  - Provides clear and actionable outcomes for each phase, including detailed reports of errors, successful deployments, and skipped items.
+
+---
 
 ### Prerequisites
 
