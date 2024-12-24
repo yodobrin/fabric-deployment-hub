@@ -90,10 +90,10 @@ public class PlannerService : IPlannerService
         return true;
     }
 
-        private async Task ProcessItemForWorkspace(
+    private async Task ProcessItemForWorkspace(
         TenantDeploymentPlanRequest tenantRequest,
         Guid workspaceId,
-        string folder,
+        string itemFolder,
         BlobContainerClient containerClient,
         WorkspaceConfig workspaceConfig,
         ItemTierConfig itemTierConfig,
@@ -103,20 +103,20 @@ public class PlannerService : IPlannerService
         PlatformMetadata? platformMetadata;
         var folderContent = await BlobUtils.GetFolderContentsAsync(
             containerClient,
-            folder,
+            itemFolder,
             _logger
         );
 
         _logger.LogInformation(
             "Folder content keys for folder {Folder}: {Keys}",
-            folder,
+            itemFolder,
             string.Join(", ", folderContent.Keys.Select(key => $"'{key}'"))
         );
 
         if (!folderContent.TryGetValue(".platform", out var platformContent))
         {
-            _logger.LogWarning("Platform metadata (.platform) not found in folder {Folder}.", folder);
-            workspaceResponse.Issues.Add($"Platform metadata (.platform) missing in folder {folder}.");
+            _logger.LogWarning("Platform metadata (.platform) not found in folder {Folder}.", itemFolder);
+            workspaceResponse.Issues.Add($"Platform metadata (.platform) missing in folder {itemFolder}.");
             return;
         }
 
@@ -131,8 +131,8 @@ public class PlannerService : IPlannerService
         }
         catch (Exception ex)
         {
-            _logger.LogError( ex,"Failed to deserialize platform metadata from .platform file in folder {Folder}.", folder );
-            workspaceResponse.Issues.Add($"Invalid .platform metadata in folder {folder}.");
+            _logger.LogError( ex,"Failed to deserialize platform metadata from .platform file in folder {Folder}.", itemFolder );
+            workspaceResponse.Issues.Add($"Invalid .platform metadata in folder {itemFolder}.");
             return; // Skip this folder if deserialization fails
         }
 
@@ -156,9 +156,9 @@ public class PlannerService : IPlannerService
             _logger.LogWarning(
                 "Content file {ContentFileName} not found in folder {Folder}.",
                 contentFileName,
-                folder
+                itemFolder
             );
-            workspaceResponse.Issues.Add($"Content file {contentFileName} missing in folder {folder}.");
+            workspaceResponse.Issues.Add($"Content file {contentFileName} missing in folder {itemFolder}.");
             return; // Skip folder if content is missing
         }
         try{
@@ -166,7 +166,7 @@ public class PlannerService : IPlannerService
             var metadata = ItemContentProcessor.ExtractMetadataFromContent(content, _logger);
             if (metadata == null)
             {
-                workspaceResponse.Issues.Add($"Failed to extract metadata from content in folder {folder}.");
+                workspaceResponse.Issues.Add($"Failed to extract metadata from content in folder {itemFolder}.");
                 return; // Skip folder if metadata extraction fails
             }
 
@@ -198,14 +198,14 @@ public class PlannerService : IPlannerService
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Critical error processing folder {Folder} for workspace {WorkspaceId}.", folder, workspaceId);
-            workspaceResponse.Issues.Add($"Critical error in folder {folder}: {ex.Message}");
+            _logger.LogError(ex, "Critical error processing folder {Folder} for workspace {WorkspaceId}.", itemFolder, workspaceId);
+            workspaceResponse.Issues.Add($"Critical error in folder {itemFolder}: {ex.Message}");
             return; // Stop processing further for this folder
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error processing folder {Folder} for workspace {WorkspaceId}.", folder, workspaceId);
-            workspaceResponse.Issues.Add($"Unexpected error in folder {folder}: {ex.Message}");
+            _logger.LogError(ex, "Unexpected error processing folder {Folder} for workspace {WorkspaceId}.", itemFolder, workspaceId);
+            workspaceResponse.Issues.Add($"Unexpected error in folder {itemFolder}: {ex.Message}");
             return; // Stop processing further for this folder
         }
 
