@@ -50,34 +50,64 @@ For a detailed explanation of the **guiding principles** and **design guidelines
 ## How
 
 ```mermaid
-graph TD;
-    A[Validate Tenant Request:lightblue]-->B{Valid Request?};
-    B -- Yes --> C[Fetch Workspaces:lightgreen];
-    C-->D{Process Workspaces:yellow};
-    D -- Yes --> E[Create Deployment Plan:pink];
-    E-->F[Save Deployment Plan:lightgrey];
-    B -- No --> G[Log Error:red];
-    D -- No --> G;
+graph TD
 
-    H[Validate Request:lightblue]-->I{Valid PlanFile & RepoContainer?};
-    I -- Yes --> J[Load Deployment Plan:lightgreen];
-    J-->K{Validate Workspaces & Requests:yellow};
-    K-->L[Save Validated Plan:pink];
-    L-->M[Return Results:lightgrey];
-    I -- No --> G;
-    J -- No --> G;
-    K -- No --> G;
+    %% --- Define shared styles for coloring ---
+    classDef lightblue fill:#ADD8E6,stroke:#333,stroke-width:1px,color:#333
+    classDef lightgreen fill:#90EE90,stroke:#333,stroke-width:1px,color:#333
+    classDef yellow fill:#FFFF00,stroke:#333,stroke-width:1px,color:#333
+    classDef pink fill:#FFC0CB,stroke:#333,stroke-width:1px,color:#333
+    classDef lightgrey fill:#D3D3D3,stroke:#333,stroke-width:1px,color:#333
+    classDef red fill:#FF0000,stroke:#333,stroke-width:1px,color:#fff
 
-    N[Validate Request:lightblue]-->O{Valid PlanFile & RepoContainer?};
-    O -- Yes --> P[Load Deployment Plan:lightgreen];
-    P-->Q{Process Workspaces:yellow};
-    Q-->R{Handle Deployment Requests:pink};
-    R-->S{Handle Errors:red};
-    S-->T{Return Results:lightgrey};
-    O -- No --> G;
-    P -- No --> G;
-    Q -- No --> G;
+    %% -----------------------------------------
+    %% Section 1
+    %% -----------------------------------------
+    A[Validate Tenant Request]:::lightblue --> B{Valid Request?}:::yellow
+    B -- Yes --> C[Fetch Workspaces]:::lightgreen
+    B -- No --> G[Log Error]:::red
+
+    C --> D[Process Workspaces]:::yellow
+    %% "Process Workspaces" is a rectangle, but we show a separate error path
+    D --> E[Create Deployment Plan]:::pink
+    D -->|Error| G[Log Error]:::red
+
+    E --> F[Save Deployment Plan]:::lightgrey
+
+    %% -----------------------------------------
+    %% Section 2
+    %% -----------------------------------------
+    H[Validate Request]:::lightblue --> I{Valid Request?}:::yellow
+    I -- Yes --> J[Load Deployment Plan]:::lightgreen
+    I -- No --> G[Log Error]:::red
+
+    %% "Load Deployment Plan" is a rectangle, can still fail
+    J --> K[Validate Workspaces]:::yellow
+    J -->|Error| G
+
+    %% "Validate Workspaces" as a rectangle; can fail
+    K --> L[Save Validated Plan]:::pink
+    K -->|Error| G
+
+    L --> M[Return Results]:::lightgrey
+
+    %% -----------------------------------------
+    %% Section 3
+    %% -----------------------------------------
+    N[Validate Request]:::lightblue --> O{Valid Request?}:::yellow
+    O -- Yes --> P[Load Deployment Plan]:::lightgreen
+    O -- No --> G[Log Error]:::red
+
+    P --> Q[Process Workspaces]:::yellow
+    P -->|Error| G
+
+    Q --> R[Handle Deployment Requests]:::pink
+    Q -->|Error| G
+
+    R --> S[Handle Errors]:::red
+    S --> T[Return Results]:::lightgrey
 ```
+
 
 ### Deployment Planning
 
