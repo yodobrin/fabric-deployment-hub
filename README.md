@@ -71,7 +71,7 @@ graph TD;
     N[Validate Request:lightblue]-->O{Valid PlanFile & RepoContainer?};
     O -- Yes --> P[Load Deployment Plan:lightgreen];
     P-->Q{Process Workspaces:yellow};
-    Q-->R{Handle Deployment Requests:pink];
+    Q-->R{Handle Deployment Requests:pink};
     R-->S{Handle Errors:red};
     S-->T{Return Results:lightgrey};
     O -- No --> G;
