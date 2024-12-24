@@ -50,30 +50,30 @@ For a detailed explanation of the **guiding principles** and **design guidelines
 ## How
 
 ```mermaid
-graph TD
-    A[Validate Tenant Request]-->B{Valid Request?};
-    B -- Yes --> C[Fetch Workspaces];
-    C-->D{Process Workspaces};
-    D -- Yes --> E[Create Deployment Plan];
-    E-->F[Save Deployment Plan];
-    B -- No --> G[Log Error];
+graph TD;
+    A[Validate Tenant Request:lightblue]-->B{Valid Request?};
+    B -- Yes --> C[Fetch Workspaces:lightgreen];
+    C-->D{Process Workspaces:yellow};
+    D -- Yes --> E[Create Deployment Plan:pink];
+    E-->F[Save Deployment Plan:lightgrey];
+    B -- No --> G[Log Error:red];
     D -- No --> G;
 
-    H[Validate Request]-->I{Valid PlanFile & RepoContainer?};
-    I -- Yes --> J[Load Deployment Plan];
-    J-->K{Validate Workspaces & Requests};
-    K-->L[Save Validated Plan];
-    L-->M[Return Results];
+    H[Validate Request:lightblue]-->I{Valid PlanFile & RepoContainer?};
+    I -- Yes --> J[Load Deployment Plan:lightgreen];
+    J-->K{Validate Workspaces & Requests:yellow};
+    K-->L[Save Validated Plan:pink];
+    L-->M[Return Results:lightgrey];
     I -- No --> G;
     J -- No --> G;
     K -- No --> G;
 
-    N[Validate Request]-->O{Valid PlanFile & RepoContainer?};
-    O -- Yes --> P[Load Deployment Plan];
-    P-->Q{Process Workspaces};
-    Q-->R{Handle Deployment Requests};
-    R-->S{Handle Errors};
-    S-->T{Return Results};
+    N[Validate Request:lightblue]-->O{Valid PlanFile & RepoContainer?};
+    O -- Yes --> P[Load Deployment Plan:lightgreen];
+    P-->Q{Process Workspaces:yellow};
+    Q-->R{Handle Deployment Requests:pink];
+    R-->S{Handle Errors:red};
+    S-->T{Return Results:lightgrey};
     O -- No --> G;
     P -- No --> G;
     Q -- No --> G;
