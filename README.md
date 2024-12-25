@@ -4,10 +4,6 @@
 
 The **Fabric Deployment Hub** is a .NET tool designed for managing deployment planning and execution in Microsoft Fabric. Hosted on Azure Container Apps (ACA), it provides APIs for scalable, multi-workspace deployments, making it ideal for CI/CD integrations and large-scale environments.
 
-A non simple topology will include multiple workspaces and capacities as described below:
-
-![Multi-tenant](./images/fabric-multi-tenant.png)
-
 ---
 
 ## Why
@@ -21,7 +17,7 @@ Microsoft Fabric environments often involve complex deployment scenarios across 
 
 ## What
 
-Here is a very high level diagram of the Fabric Deployment Hub together with the fabric tenant:
+Here is a very high level diagram of the Fabric Deployment Hub together with a non simple fabric tenant topology with multiple workspaces and capacities:
 
 ![Deployment Hub](./images/deployment_hub_HL.png)
 
@@ -31,6 +27,8 @@ This tool provides:
 - **Containerized Environment** for easy scalability and deployment.
 - **Dynamic Configuration Management** to streamline multi-tenant deployments.
 - **Azure Managed Identity Integration** for secure authentication and access control.
+
+The security angle is detailed in [network-security-design](./network-security-design.md)
 
 ### Additional Resources
 
