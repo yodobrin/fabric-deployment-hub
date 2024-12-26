@@ -39,7 +39,7 @@ For a detailed explanation of the **guiding principles** and **design guidelines
 ### Key Features
 
 - **Scalable Deployments**: Handles large-scale deployment needs.
-- **Customizable Configurations**: Uses `appsettings.json` for tenant-specific setups.
+- **Customizable Configurations**: Uses configuration for tenant-specific setups. (Multi tier offering etc.)
 - **Secure Authentication**: Integrates with Azure Managed Identities for secure and compliant operations.
 
 ![GitHub & DeploymentHub](./images/github-deploymenthub.png)
